@@ -7,18 +7,17 @@ use Illuminate\Http\Request;
 
 class RoomController extends Controller
 {
-    /**
-     * Display a listing of the rooms.
-     */
     public function index()
     {
-        $rooms = Room::all();
-        return response()->json($rooms);
+        $rooms = Room::with('users')->get();
+        return view('rooms.index', compact('rooms'));
     }
 
-    /**
-     * Store a newly created room in storage.
-     */
+    public function create()
+    {
+        return view('rooms.create');
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -27,40 +26,46 @@ class RoomController extends Controller
         ]);
 
         $room = Room::create($validated);
+        $room->users()->attach(auth()->id());
 
-        return response()->json($room, 201);
+        return redirect()->route('rooms.index')
+            ->with('success', 'Room created successfully.');
     }
 
-    /**
-     * Display the specified room.
-     */
     public function show(Room $room)
     {
-        return response()->json($room);
+        // Check if user is a member
+        if (!$room->users->contains(auth()->id())) {
+            return redirect()->route('rooms.index')
+                ->with('error', 'You must be a member to view room details.');
+        }
+
+        $room->load('users');
+        return view('rooms.show', compact('room'));
     }
 
-    /**
-     * Update the specified room in storage.
-     */
-    public function update(Request $request, Room $room)
+    public function join(Request $request, Room $room)
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'password' => 'nullable|string|max:255',
-        ]);
+        // Check if user is already in the room
+        if ($room->users->contains(auth()->id())) {
+            return redirect()->route('rooms.show', $room);
+        }
 
-        $room->update($validated);
+        // Check password if room has one
+        if ($room->password) {
+            $request->validate([
+                'password' => 'required|string',
+            ]);
 
-        return response()->json($room);
-    }
+            if ($request->password !== $room->password) {
+                return back()->withErrors([
+                    'password' => 'Incorrect password.',
+                ]);
+            }
+        }
 
-    /**
-     * Remove the specified room from storage.
-     */
-    public function destroy(Room $room)
-    {
-        $room->delete();
-
-        return response()->json(['message' => 'Room deleted successfully.']);
+        $room->users()->attach(auth()->id());
+        return redirect()->route('rooms.show', $room)
+            ->with('success', 'Joined room successfully.');
     }
 }
