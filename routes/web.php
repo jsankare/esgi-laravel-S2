@@ -26,10 +26,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/rooms', [RoomController::class, 'store'])->name('rooms.store');
     Route::get('/rooms/{room}', [RoomController::class, 'show'])->name('rooms.show');
     Route::post('/rooms/{room}/join', [RoomController::class, 'join'])->name('rooms.join');
+    Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
 
     // Movies routes
     Route::get('/movies', [MovieController::class, 'index'])->name('movies.index');
     Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->name('movies.show');
+
 });
 
 require __DIR__.'/auth.php';

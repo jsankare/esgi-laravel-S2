@@ -25,6 +25,8 @@ class RoomController extends Controller
             'password' => 'nullable|string|max:255',
         ]);
 
+        $validated['creator_id'] = auth()->id();
+
         $room = Room::create($validated);
         $room->users()->attach(auth()->id());
 
@@ -67,5 +69,17 @@ class RoomController extends Controller
         $room->users()->attach(auth()->id());
         return redirect()->route('rooms.show', $room)
             ->with('success', 'Joined room successfully.');
+    }
+
+    public function destroy(Room $room)
+    {
+        if ($room->creator_id !== auth()->id()) {
+            return redirect()->route('rooms.index')
+                ->with('error', 'Only the creator can delete the room.');
+        }
+
+        $room->delete();
+        return redirect()->route('rooms.index')
+            ->with('success', 'Room deleted successfully.');
     }
 }
