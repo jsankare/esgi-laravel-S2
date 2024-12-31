@@ -2,75 +2,45 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Movie;
+use App\Services\OmdbService;
 use Illuminate\Http\Request;
 
 class MovieController extends Controller
 {
-    /**
-     * Display a listing of the movies.
-     */
-    public function index()
+    protected $omdbService;
+
+    public function __construct(OmdbService $omdbService)
     {
-        $movies = Movie::all();
-        return response()->json($movies);
+        $this->omdbService = $omdbService;
     }
 
-    /**
-     * Store a newly created movie in storage.
-     */
-    public function store(Request $request)
+    public function index(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'imdb_id' => 'nullable|string|max:255',
-            'year' => 'required|integer',
-            'genre' => 'nullable|string|max:255',
-            'director' => 'nullable|string|max:255',
-            'plot' => 'nullable|string',
-            'poster_url' => 'nullable|string|max:255',
+        $search = $request->get('search');
+        $genre = $request->get('genre');
+        $page = $request->get('page');
+
+        $result = $this->omdbService->searchMovies($search, $genre, $page);
+        $genres = $this->omdbService->getAllGenres();
+
+        return view('movies.index', [
+            'movies' => $result['movies'],
+            'total' => $result['total'],
+            'currentPage' => $result['current_page'],
+            'genres' => $genres,
+            'selectedGenre' => $genre,
+            'search' => $search,
         ]);
-
-        $movie = Movie::create($validated);
-
-        return response()->json($movie, 201);
     }
 
-    /**
-     * Display the specified movie.
-     */
-    public function show(Movie $movie)
+    public function show(string $imdbId)
     {
-        return response()->json($movie);
-    }
+        $movie = $this->omdbService->getMovieDetails($imdbId);
 
-    /**
-     * Update the specified movie in storage.
-     */
-    public function update(Request $request, Movie $movie)
-    {
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'imdb_id' => 'nullable|string|max:255',
-            'year' => 'sometimes|integer',
-            'genre' => 'nullable|string|max:255',
-            'director' => 'nullable|string|max:255',
-            'plot' => 'nullable|string',
-            'poster_url' => 'nullable|string|max:255',
-        ]);
+        if (!$movie) {
+            abort(404);
+        }
 
-        $movie->update($validated);
-
-        return response()->json($movie);
-    }
-
-    /**
-     * Remove the specified movie from storage.
-     */
-    public function destroy(Movie $movie)
-    {
-        $movie->delete();
-
-        return response()->json(['message' => 'Movie deleted successfully.']);
+        return view('movies.show', ['movie' => $movie]);
     }
 }

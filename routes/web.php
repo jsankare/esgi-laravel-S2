@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
 
     // Movies routes
     Route::get('/movies', [MovieController::class, 'index'])->name('movies.index');
+    Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->name('movies.show');
 });
 
 require __DIR__.'/auth.php';
