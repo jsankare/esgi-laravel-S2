@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RoomGameController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MovieController;
@@ -39,10 +38,6 @@ Route::middleware('auth')->group(function () {
     // Movies routes
     Route::get('/movies', [MovieController::class, 'index'])->name('movies.index');
     Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->name('movies.show');
-
-    // Game routes
-    Route::post('/rooms/{room}/start-game', [RoomGameController::class, 'startGame']);
-    Route::post('/rooms/{room}/movies/{movie}/eliminate', [RoomGameController::class, 'eliminateMovie']);
 
 });
 
