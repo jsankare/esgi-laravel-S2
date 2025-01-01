@@ -12,6 +12,15 @@ class Room extends Model
         'name',
         'password',
         'creator_id',
+        'elimination_started',
+        'elimination_in_progress',
+        'last_elimination_at',
+    ];
+
+    protected $casts = [
+        'elimination_started' => 'boolean',
+        'elimination_in_progress' => 'boolean',
+        'last_elimination_at' => 'datetime',
     ];
 
     /**
@@ -39,5 +48,15 @@ class Room extends Model
     {
         return $this->belongsToMany(User::class, 'room_user')
             ->withTimestamps();
+    }
+
+    /**
+     * Check if elimination can be started
+     */
+    public function canStartElimination(): bool
+    {
+        return !$this->elimination_started &&
+            !$this->elimination_in_progress &&
+            $this->movies()->count() > 1;
     }
 }

@@ -1,10 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MovieController;
 use App\Http\Controllers\RoomMovieController;
+use App\Http\Controllers\RoomEliminationController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
@@ -38,6 +39,12 @@ Route::middleware('auth')->group(function () {
     // Movies routes
     Route::get('/movies', [MovieController::class, 'index'])->name('movies.index');
     Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->name('movies.show');
+
+    // Room Elimination routes
+    Route::post('/rooms/{room}/elimination/start', [RoomEliminationController::class, 'start']);
+    Route::post('/rooms/{room}/elimination/eliminate', [RoomEliminationController::class, 'eliminate']);
+    Route::get('/rooms/{room}/elimination/status', [RoomEliminationController::class, 'status']);
+    Route::post('/rooms/{room}/elimination/reset', [RoomEliminationController::class, 'reset']);
 
 });
 
