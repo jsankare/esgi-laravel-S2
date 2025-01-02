@@ -9,6 +9,7 @@
         "php": "^8.2",
         "laravel/framework": "^11.31",
         "laravel/sail": "^1.39",
+        "laravel/scout": "^10.11",
         "laravel/tinker": "^2.9"
     },
     "require-dev": {

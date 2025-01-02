@@ -6,6 +6,7 @@ use App\Models\Room;
 use App\Models\Movie;
 use App\Services\OmdbService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class RoomMovieController extends Controller
 {
@@ -19,7 +20,23 @@ class RoomMovieController extends Controller
     public function search(Request $request, Room $room)
     {
         $search = $request->get('search');
-        $result = $this->omdbService->searchMovies($search);
+
+        // First try to find movies in our database
+        $localMovies = Movie::search($search)
+            ->take(10)
+            ->get();
+
+        if ($localMovies->isNotEmpty()) {
+            return response()->json([
+                'movies' => $localMovies
+            ]);
+        }
+
+        // If no local results, search OMDB and cache results
+        $cacheKey = 'omdb_search_' . md5($search);
+        $result = Cache::remember($cacheKey, now()->addHours(24), function () use ($search) {
+            return $this->omdbService->searchMovies($search);
+        });
 
         return response()->json([
             'movies' => $result['movies']
@@ -51,18 +68,12 @@ class RoomMovieController extends Controller
             return response()->json(['error' => 'This movie has already been added to the room.'], 422);
         }
 
-        // Check if user has already added this movie
-        $userHasMovie = $room->movies()
-            ->wherePivot('user_id', auth()->id())
-            ->where('imdb_id', $request->imdb_id)
-            ->exists();
+        // Get movie details from cache or OMDB
+        $cacheKey = 'movie_details_' . $request->imdb_id;
+        $movieDetails = Cache::remember($cacheKey, now()->addDays(7), function () use ($request) {
+            return $this->omdbService->getMovieDetails($request->imdb_id);
+        });
 
-        if ($userHasMovie) {
-            return response()->json(['error' => 'You have already added this movie.'], 422);
-        }
-
-        // Get movie details from OMDB
-        $movieDetails = $this->omdbService->getMovieDetails($request->imdb_id);
         if (!$movieDetails) {
             return response()->json(['error' => 'Movie not found.'], 404);
         }

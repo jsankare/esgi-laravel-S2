@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Laravel\Scout\Searchable;
 
 class Movie extends Model
 {
+    use Searchable;
+
     protected $fillable = [
         'title',
         'imdb_id',
@@ -16,16 +18,22 @@ class Movie extends Model
         'director',
         'plot',
         'poster_url',
-        'eliminated_by',
-        'eliminated_at',
     ];
 
     /**
-     * Get the user who eliminated the movie.
+     * Get the indexable data array for the model.
+     *
+     * @return array
      */
-    public function eliminatedBy(): BelongsTo
+    public function toSearchableArray()
     {
-        return $this->belongsTo(User::class, 'eliminated_by');
+        return [
+            'title' => $this->title,
+            'director' => $this->director,
+            'genre' => $this->genre,
+            'year' => $this->year,
+            'plot' => $this->plot,
+        ];
     }
 
     /**
@@ -34,7 +42,7 @@ class Movie extends Model
     public function rooms(): BelongsToMany
     {
         return $this->belongsToMany(Room::class, 'room_movie')
-            ->withPivot('user_id')
+            ->withPivot(['user_id', 'eliminated_by', 'eliminated_at'])
             ->withTimestamps();
     }
 }

@@ -36,25 +36,28 @@ class RoomEliminationController extends Controller
         }
 
         $remainingMovies = $room->movies()
-            ->whereNull('eliminated_at')
+            ->wherePivot('eliminated_at', null)
             ->count();
 
         if ($remainingMovies <= 1) {
             $room->update(['elimination_in_progress' => false]);
             return response()->json([
                 'status' => 'completed',
-                'winner' => $room->movies()->whereNull('eliminated_at')->first()
+                'winner' => $room->movies()
+                    ->wherePivot('eliminated_at', null)
+                    ->first()
             ]);
         }
 
         // Randomly select a movie to eliminate
         $movieToEliminate = $room->movies()
-            ->whereNull('eliminated_at')
+            ->wherePivot('eliminated_at', null)
             ->inRandomOrder()
             ->first();
 
         if ($movieToEliminate) {
-            $movieToEliminate->update([
+            // Update the pivot table with elimination data
+            $room->movies()->updateExistingPivot($movieToEliminate->id, [
                 'eliminated_by' => Auth::id(),
                 'eliminated_at' => now(),
             ]);
@@ -77,11 +80,11 @@ class RoomEliminationController extends Controller
             'elimination_started' => $room->elimination_started,
             'elimination_in_progress' => $room->elimination_in_progress,
             'remaining_movies' => $room->movies()
-                ->whereNull('eliminated_at')
+                ->wherePivot('eliminated_at', null)
                 ->get(),
             'eliminated_movies' => $room->movies()
-                ->whereNotNull('eliminated_at')
-                ->orderBy('eliminated_at', 'desc')
+                ->wherePivot('eliminated_at', '!=', null)
+                ->orderByPivot('eliminated_at', 'desc')
                 ->get()
         ]);
     }
@@ -93,9 +96,10 @@ class RoomEliminationController extends Controller
         }
 
         DB::transaction(function () use ($room) {
+            // Reset elimination data in pivot table
             $room->movies()->update([
-                'eliminated_by' => null,
-                'eliminated_at' => null
+                'room_movie.eliminated_by' => null,
+                'room_movie.eliminated_at' => null
             ]);
 
             $room->update([
