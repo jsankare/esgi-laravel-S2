@@ -21,25 +21,45 @@ class RoomMovieController extends Controller
     {
         $search = $request->get('search');
 
-        // First try to find movies in our database
-        $localMovies = Movie::search($search)
-            ->take(10)
-            ->get();
-
-        if ($localMovies->isNotEmpty()) {
-            return response()->json([
-                'movies' => $localMovies
-            ]);
+        if (empty($search)) {
+            return response()->json(['movies' => []]);
         }
 
-        // If no local results, search OMDB and cache results
-        $cacheKey = 'omdb_search_' . md5($search);
-        $result = Cache::remember($cacheKey, now()->addHours(24), function () use ($search) {
-            return $this->omdbService->searchMovies($search);
+        // Get both local and OMDB results
+        $localMovies = Movie::search($search)->take(10)->get();
+        $omdbResults = Cache::remember(
+            'omdb_search_' . md5($search),
+            now()->addHours(24),
+            fn() => $this->omdbService->searchMovies($search)
+        );
+
+        // Combine and deduplicate results
+        $allMovies = collect();
+
+        // Add local movies first
+        $localMovies->each(function($movie) use ($allMovies) {
+            $allMovies->push([
+                'Title' => $movie->title,
+                'Year' => $movie->year,
+                'imdbID' => $movie->imdb_id,
+                'Poster' => $movie->poster_url,
+                'Director' => $movie->director,
+                'Genre' => $movie->genre,
+                'Plot' => $movie->plot
+            ]);
         });
 
+        // Add OMDB movies, excluding any that are already in local results
+        if (isset($omdbResults['movies']) && $omdbResults['movies']->isNotEmpty()) {
+            $omdbResults['movies']->each(function($movie) use ($allMovies, $localMovies) {
+                if (!$localMovies->contains('imdb_id', $movie['imdbID'])) {
+                    $allMovies->push($movie);
+                }
+            });
+        }
+
         return response()->json([
-            'movies' => $result['movies']
+            'movies' => $allMovies->take(10)
         ]);
     }
 

@@ -71,6 +71,14 @@ Get project
    ```bash
    git clone
    ```
+
+Duplicate .env.example and add these variables to .env
+   ```bash
+    WWWGROUP=1000
+    WWWUSER=1000
+    OMDB_API_KEY=f88d36a6
+   ```
+
 Install composer dependencies through docker
    ```bash
    docker run --rm \
@@ -111,10 +119,14 @@ Run migrations
    ./vendor/bin/sail artisan migrate  
    ```
 
-Add these variables to .env 
+Install node dependencies
    ```bash
-    WWWGROUP=1000
-    WWWUSER=1000
+   npm install
+   ```
+
+Run Vite
+   ```bash
+   npm run dev
    ```
 
 Go to localhost

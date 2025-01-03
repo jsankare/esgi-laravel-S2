@@ -20,13 +20,15 @@
                 <div class="p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold">Movies in this Room</h3>
-                        @if($room->creator_id === auth()->id())
+                        @if($room->creator_id === auth()->id() && $room->movies->count() >= 2)
                             <div class="flex gap-2">
+                                @if(!$room["elimination_started"])
                                 <button onclick="toggleElimination()"
                                         id="eliminationButton"
                                         class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
                                     Start Elimination
                                 </button>
+                                @endif
                                 @if($room->elimination_started)
                                     <button onclick="resetElimination()"
                                             class="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition">

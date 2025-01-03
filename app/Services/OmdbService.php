@@ -14,15 +14,18 @@ class OmdbService
         $this->apiKey = env('OMDB_API_KEY');
     }
 
-    public function searchMovies(?string $search = '', ?string $genre = '', ?int $page = 1)
+    public function searchMovies(?string $search = '', ?string $genre = '', ?int $page = 1): array
     {
-        $query = ['apikey' => $this->apiKey, 'page' => $page ?? 1, 'type' => 'movie'];
+        $query = [
+            'apikey' => $this->apiKey,
+            'page' => $page ?? 1,
+            'type' => 'movie'
+        ];
 
         if (!empty($search)) {
             $query['s'] = $search;
         } else {
-            // If no search term, use a default search to get movies
-            $query['s'] = 'movie';
+            $query['s'] = 'movie'; // Default search to get some movies
         }
 
         $response = Http::get($this->baseUrl, $query);
@@ -44,10 +47,14 @@ class OmdbService
             ];
         }
 
-        return ['movies' => collect(), 'total' => 0, 'current_page' => 1];
+        return [
+            'movies' => collect(),
+            'total' => 0,
+            'current_page' => 1
+        ];
     }
 
-    public function getMovieDetails(string $imdbId)
+    public function getMovieDetails(string $imdbId): ?array
     {
         $response = Http::get($this->baseUrl, [
             'apikey' => $this->apiKey,
@@ -62,7 +69,7 @@ class OmdbService
         return null;
     }
 
-    public function getAllGenres()
+    public function getAllGenres(): array
     {
         return [
             'Action', 'Adventure', 'Animation', 'Biography', 'Comedy',
