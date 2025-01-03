@@ -14,7 +14,13 @@ class RoomSeeder extends Seeder
         $users = User::all();
         $movies = Movie::all();
 
-        // Create 5 rooms
+        // Ensure there are enough users and movies to proceed
+        if ($users->count() < 2 || $movies->count() < 2) {
+            $this->command->warn('Not enough users or movies to seed rooms.');
+            return;
+        }
+
+        // Create rooms
         for ($i = 1; $i <= 5; $i++) {
             $creator = $users->random();
 
@@ -28,13 +34,15 @@ class RoomSeeder extends Seeder
             $room->users()->attach($creator->id);
 
             // Add 2-3 random members to each room
-            $members = $users->except($creator->id)->random(rand(2, 3));
+            $maxMembers = min($users->except($creator->id)->count(), 3); // Ensure no more than available
+            $members = $users->except($creator->id)->random(rand(2, $maxMembers));
             foreach ($members as $member) {
                 $room->users()->attach($member->id);
             }
 
             // Add 2-4 random movies to each room
-            $roomMovies = $movies->random(rand(2, 4));
+            $maxMovies = min($movies->count(), 4); // Ensure no more than available
+            $roomMovies = $movies->random(rand(2, $maxMovies));
             foreach ($roomMovies as $movie) {
                 $room->movies()->attach($movie->id, [
                     'user_id' => $room->users->random()->id

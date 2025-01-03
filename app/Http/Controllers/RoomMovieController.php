@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Room;
 use App\Models\Movie;
 use App\Services\OmdbService;
+use App\Http\Requests\StoreRoomMovieRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -63,31 +64,8 @@ class RoomMovieController extends Controller
         ]);
     }
 
-    public function store(Request $request, Room $room)
+    public function store(StoreRoomMovieRequest $request, Room $room)
     {
-        // Check if user is member of the room
-        if (!$room->users->contains(auth()->id())) {
-            return response()->json(['error' => 'You must be a member to add movies.'], 403);
-        }
-
-        // Check if user has already added 5 movies
-        $userMoviesCount = $room->movies()
-            ->wherePivot('user_id', auth()->id())
-            ->count();
-
-        if ($userMoviesCount >= 5) {
-            return response()->json(['error' => 'You can only add up to 5 movies.'], 422);
-        }
-
-        // Check if movie already exists in the room
-        $movieExists = $room->movies()
-            ->where('imdb_id', $request->imdb_id)
-            ->exists();
-
-        if ($movieExists) {
-            return response()->json(['error' => 'This movie has already been added to the room.'], 422);
-        }
-
         // Get movie details from cache or OMDB
         $cacheKey = 'movie_details_' . $request->imdb_id;
         $movieDetails = Cache::remember($cacheKey, now()->addDays(7), function () use ($request) {

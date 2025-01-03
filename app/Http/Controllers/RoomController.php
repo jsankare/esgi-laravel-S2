@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Room;
+use App\Http\Requests\StoreRoomRequest;
+use App\Http\Requests\JoinRoomRequest;
 use Illuminate\Http\Request;
 
 class RoomController extends Controller
@@ -18,13 +20,9 @@ class RoomController extends Controller
         return view('rooms.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreRoomRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'password' => 'nullable|string|max:255',
-        ]);
-
+        $validated = $request->validated();
         $validated['creator_id'] = auth()->id();
 
         $room = Room::create($validated);
@@ -46,7 +44,7 @@ class RoomController extends Controller
         return view('rooms.show', compact('room'));
     }
 
-    public function join(Request $request, Room $room)
+    public function join(JoinRoomRequest $request, Room $room)
     {
         // Check if user is already in the room
         if ($room->users->contains(auth()->id())) {
@@ -54,16 +52,10 @@ class RoomController extends Controller
         }
 
         // Check password if room has one
-        if ($room->password) {
-            $request->validate([
-                'password' => 'required|string',
+        if ($room->password && $request->password !== $room->password) {
+            return back()->withErrors([
+                'password' => 'Incorrect password.',
             ]);
-
-            if ($request->password !== $room->password) {
-                return back()->withErrors([
-                    'password' => 'Incorrect password.',
-                ]);
-            }
         }
 
         $room->users()->attach(auth()->id());
