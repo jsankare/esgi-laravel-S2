@@ -119,6 +119,11 @@ Run migrations
    ./vendor/bin/sail artisan migrate  
    ```
 
+Run seeders
+   ```bash 
+   ./vendor/bin/sail artisan db:seed 
+   ```
+
 Install node dependencies
    ```bash
    npm install
