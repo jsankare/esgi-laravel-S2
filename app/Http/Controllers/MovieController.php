@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\OmdbService;
+use App\Services\TmdbService;
 use Illuminate\Http\Request;
 
 class MovieController extends Controller
 {
-    protected $omdbService;
+    protected $tmdbService;
 
-    public function __construct(OmdbService $omdbService)
+    public function __construct(TmdbService $tmdbService)
     {
-        $this->omdbService = $omdbService;
+        $this->tmdbService = $tmdbService;
     }
 
     public function index(Request $request)
@@ -20,8 +20,8 @@ class MovieController extends Controller
         $genre = $request->get('genre');
         $page = $request->get('page');
 
-        $result = $this->omdbService->searchMovies($search, $genre, $page);
-        $genres = $this->omdbService->getAllGenres();
+        $result = $this->tmdbService->searchMovies($search, $genre, $page);
+        $genres = $this->tmdbService->getAllGenres();
 
         return view('movies.index', [
             'movies' => $result['movies'],
@@ -35,7 +35,7 @@ class MovieController extends Controller
 
     public function show(string $imdbId)
     {
-        $movie = $this->omdbService->getMovieDetails($imdbId);
+        $movie = $this->tmdbService->getMovieDetails($imdbId);
 
         if (!$movie) {
             abort(404);

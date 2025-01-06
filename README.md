@@ -76,7 +76,7 @@ Duplicate .env.example and add these variables to .env
    ```bash
     WWWGROUP=1000
     WWWUSER=1000
-    OMDB_API_KEY=f88d36a6
+    TMDB_API_KEY=1deebd27c156a77e1309308d9ee1f83f
    ```
 
 Install composer dependencies through docker
