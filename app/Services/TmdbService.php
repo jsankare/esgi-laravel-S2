@@ -15,7 +15,7 @@ class TmdbService
         $this->apiKey = env('TMDB_API_KEY');
     }
 
-    public function searchMovies(?string $search = '', ?string $genre = '', ?int $page = 1): array
+    public function searchMovies(?string $search = '', ?string $genre = '', ?int $page = 1, ?int $limit = 18): array
     {
         $query = [
             'api_key' => $this->apiKey,
@@ -56,6 +56,10 @@ class TmdbService
                 }
                 return null;
             })->filter();
+
+            if ($limit) {
+                $movies = $movies->take($limit);
+            }
 
             return [
                 'movies' => $movies,

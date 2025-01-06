@@ -134,4 +134,12 @@ Run Vite
    npm run dev
    ```
 
-Go to localhost
+Go to localhost and register / login
+
+login credentials admin :
+
+   ```bash
+    email : admin@example.com
+    password : password
+   ```
+
