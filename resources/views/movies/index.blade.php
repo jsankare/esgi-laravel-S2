@@ -72,10 +72,39 @@
                     </div>
 
                     <!-- Pagination -->
-                    @if($total > 10)
+                    @if($total > 1)
                         <div class="mt-6 flex justify-center">
                             <div class="flex gap-2">
-                                @for($i = 1; $i <= min(ceil($total / 10), 10); $i++)
+                                {{-- Always show the first 3 pages --}}
+                                @for($i = 1; $i <= 3; $i++)
+                                    @if($i <= ceil($total)) {{-- Ensure the page exists --}}
+                                    <a href="{{ route('movies.index', ['page' => $i, 'search' => $search, 'genre' => $selectedGenre]) }}"
+                                       class="px-4 py-2 border dark:border-gray-700 rounded-md {{ $currentPage == $i ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                        {{ $i }}
+                                    </a>
+                                    @endif
+                                @endfor
+
+                                {{-- Show ellipsis if there's a gap --}}
+                                @if($currentPage > 6)
+                                    <span class="px-4 py-2">...</span>
+                                @endif
+
+                                {{-- Show 3 pages before and after the current page --}}
+                                @for($i = max(4, $currentPage - 3); $i <= min(ceil($total) - 3, $currentPage + 3); $i++)
+                                    <a href="{{ route('movies.index', ['page' => $i, 'search' => $search, 'genre' => $selectedGenre]) }}"
+                                       class="px-4 py-2 border dark:border-gray-700 rounded-md {{ $currentPage == $i ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
+                                        {{ $i }}
+                                    </a>
+                                @endfor
+
+                                {{-- Show ellipsis if there's a gap --}}
+                                @if($currentPage < ceil($total) - 6)
+                                    <span class="px-4 py-2">...</span>
+                                @endif
+
+                                {{-- Always show the last 3 pages --}}
+                                @for($i = max(ceil($total) - 2, 4); $i <= ceil($total); $i++)
                                     <a href="{{ route('movies.index', ['page' => $i, 'search' => $search, 'genre' => $selectedGenre]) }}"
                                        class="px-4 py-2 border dark:border-gray-700 rounded-md {{ $currentPage == $i ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-700' }}">
                                         {{ $i }}
@@ -84,6 +113,7 @@
                             </div>
                         </div>
                     @endif
+
                 </div>
             </div>
         </div>

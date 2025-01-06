@@ -47,14 +47,14 @@
 
                                 <p class="text-gray-700 dark:text-gray-300">{{ $movie['Plot'] }}</p>
 
-                                <div class="space-y-2">
+                                <div class="space-y-2 text-gray-600 dark:text-gray-400">
                                     <p><span class="font-semibold">Director:</span> {{ $movie['Director'] }}</p>
                                     <p><span class="font-semibold">Writers:</span> {{ $movie['Writer'] }}</p>
                                     <p><span class="font-semibold">Actors:</span> {{ $movie['Actors'] }}</p>
                                 </div>
 
                                 @if($movie['Ratings'])
-                                    <div class="mt-6">
+                                    <div class="mt-6 text-gray-600 dark:text-gray-400">
                                         <h2 class="text-xl font-semibold mb-3">Ratings</h2>
                                         <div class="space-y-2">
                                             @foreach($movie['Ratings'] as $rating)
