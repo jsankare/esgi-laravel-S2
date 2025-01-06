@@ -74,4 +74,33 @@ class RoomController extends Controller
         return redirect()->route('rooms.index')
             ->with('success', 'Room deleted successfully.');
     }
+
+    public function edit(Room $room)
+    {
+        if ($room->creator_id !== auth()->id()) {
+            return redirect()->route('rooms.index')
+                ->with('error', 'Only the creator can edit the room.');
+        }
+
+        return view('rooms.edit', compact('room'));
+    }
+
+    public function update(Request $request, Room $room)
+    {
+        if ($room->creator_id !== auth()->id()) {
+            return redirect()->route('rooms.index')
+                ->with('error', 'Only the creator can update the room.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'password' => 'nullable|string|max:255',
+        ]);
+
+        $room->update($validated);
+
+        return redirect()->route('rooms.index')
+            ->with('success', 'Room updated successfully.');
+    }
+
 }

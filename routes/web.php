@@ -29,6 +29,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/rooms/{room}', [RoomController::class, 'show'])->name('rooms.show');
     Route::post('/rooms/{room}/join', [RoomController::class, 'join'])->name('rooms.join');
     Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
+    Route::get('/rooms/{room}/edit', [RoomController::class, 'edit'])->name('rooms.edit');
+    Route::match(['put', 'patch'], '/rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
+
 
     // Room Movies routes
     Route::get('/rooms/{room}/movies/search', [RoomMovieController::class, 'search']);
