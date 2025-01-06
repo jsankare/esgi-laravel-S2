@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Room;
 use App\Models\Movie;
-use App\Services\OmdbService;
+use App\Services\TmdbService;
 use App\Http\Requests\StoreRoomMovieRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -12,11 +12,11 @@ use Illuminate\Support\Facades\Validator;
 
 class RoomMovieController extends Controller
 {
-    protected $omdbService;
+    protected $tmdbService;
 
-    public function __construct(OmdbService $omdbService)
+    public function __construct(TmdbService $tmdbService)
     {
-        $this->omdbService = $omdbService;
+        $this->tmdbService = $tmdbService;
     }
 
     public function search(Request $request, Room $room)
@@ -27,12 +27,12 @@ class RoomMovieController extends Controller
             return response()->json(['movies' => []]);
         }
 
-        // Get both local and OMDB results
+        // Get both local and TMDB results
         $localMovies = Movie::search($search)->take(10)->get();
-        $omdbResults = Cache::remember(
-            'omdb_search_' . md5($search),
+        $tmdbResults = Cache::remember(
+            'tmdb_search_' . md5($search),
             now()->addHours(24),
-            fn() => $this->omdbService->searchMovies($search)
+            fn() => $this->tmdbService->searchMovies($search)
         );
 
         // Combine and deduplicate results
@@ -51,9 +51,9 @@ class RoomMovieController extends Controller
             ]);
         });
 
-        // Add OMDB movies, excluding any that are already in local results
-        if (isset($omdbResults['movies']) && $omdbResults['movies']->isNotEmpty()) {
-            $omdbResults['movies']->each(function($movie) use ($allMovies, $localMovies) {
+        // Add TMDB movies, excluding any that are already in local results
+        if (isset($tmdbResults['movies']) && $tmdbResults['movies']->isNotEmpty()) {
+            $tmdbResults['movies']->each(function($movie) use ($allMovies, $localMovies) {
                 if (!$localMovies->contains('imdb_id', $movie['imdbID'])) {
                     $allMovies->push($movie);
                 }
@@ -95,10 +95,10 @@ class RoomMovieController extends Controller
             return response()->json(['error' => 'This movie has already been added to the room.'], 422);
         }
 
-        // Get movie details from cache or OMDB
+        // Get movie details from cache or TMDB
         $cacheKey = 'movie_details_' . $request->imdb_id;
         $movieDetails = Cache::remember($cacheKey, now()->addDays(7), function () use ($request) {
-            return $this->omdbService->getMovieDetails($request->imdb_id);
+            return $this->tmdbService->getMovieDetails($request->imdb_id);
         });
 
         if (!$movieDetails) {
@@ -107,14 +107,14 @@ class RoomMovieController extends Controller
 
         // Create or update movie record
         $movie = Movie::updateOrCreate(
-            ['imdb_id' => $movieDetails['imdbID']],
+            ['imdb_id' => $movieDetails['imdb_id']],
             [
                 'title' => $movieDetails['Title'],
-                'year' => (int) filter_var($movieDetails['Year'], FILTER_SANITIZE_NUMBER_INT),
+                'year' => (int) $movieDetails['Year'],
                 'genre' => $movieDetails['Genre'],
                 'director' => $movieDetails['Director'],
                 'plot' => $movieDetails['Plot'],
-                'poster_url' => $movieDetails['Poster'] !== 'N/A' ? $movieDetails['Poster'] : null,
+                'poster_url' => $movieDetails['Poster'],
             ]
         );
 
