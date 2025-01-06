@@ -138,7 +138,7 @@
         <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
         <script>
             let eliminationInterval;
-            const ELIMINATION_INTERVAL = 3000;
+            const ELIMINATION_INTERVAL = 1500;
 
             async function toggleElimination() {
                 const button = document.getElementById('eliminationButton');
