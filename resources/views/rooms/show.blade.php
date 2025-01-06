@@ -15,7 +15,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <!-- Add notification container at the top -->
+            <!-- Notification Container -->
             <div id="notification" class="hidden fixed top-4 right-4 z-50 max-w-sm">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border-l-4 flex items-center">
                     <div id="notification-icon" class="mr-3"></div>
@@ -29,19 +29,20 @@
                     </button>
                 </div>
             </div>
+
             <!-- Movie List -->
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold">Movies in this Room</h3>
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Movies</h3>
                         @if($room->creator_id === auth()->id() && $room->movies->count() >= 2)
                             <div class="flex gap-2">
                                 @if(!$room["elimination_started"])
-                                <button onclick="toggleElimination()"
-                                        id="eliminationButton"
-                                        class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Start Elimination
-                                </button>
+                                    <button onclick="toggleElimination()"
+                                            id="eliminationButton"
+                                            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                        Start Elimination
+                                    </button>
                                 @endif
                                 @if($room->elimination_started)
                                     <button onclick="resetElimination()"
@@ -54,53 +55,65 @@
                     </div>
 
                     <!-- Elimination Status -->
-                    <div id="eliminationStatus" class="hidden mb-4">
-                        <div class="text-center p-4 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                            <h4 class="text-lg font-semibold mb-2">Elimination in Progress</h4>
-                            <p id="remainingCount" class="text-gray-600 dark:text-gray-400"></p>
+                    <div id="eliminationStatus" class="hidden mb-6">
+                        <div class="text-center p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 dark:from-red-900/30 dark:to-orange-900/30 rounded-lg border border-red-200 dark:border-red-800">
+                            <p class="text-lg font-medium text-gray-800 dark:text-gray-200">Elimination in Progress</p>
+                            <p id="remainingCount" class="mt-1 text-sm text-gray-600 dark:text-gray-400"></p>
                         </div>
                     </div>
 
                     <!-- Winner Display -->
-                    <div id="winnerDisplay" class="hidden mb-4">
-                        <div class="text-center p-4 bg-green-100 dark:bg-green-900 rounded-lg">
-                            <h4 class="text-xl font-bold mb-2">🏆 Winner! 🏆</h4>
+                    <div id="winnerDisplay" class="hidden mb-6">
+                        <div class="text-center p-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg border border-green-200 dark:border-green-800">
+                            <div class="inline-block mb-4">
+                                <svg class="w-12 h-12 text-green-500 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <h4 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">Winner</h4>
                             <div id="winnerMovie" class="space-y-2"></div>
                         </div>
                     </div>
 
-                    <div id="moviesList" class="divide-y dark:divide-gray-700">
+                    <!-- Movies Grid -->
+                    <div id="moviesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($room->movies as $movie)
-                            <div class="py-4 flex justify-between items-center movie-item transition-all duration-500"
+                            <div class="relative p-4 rounded-lg border dark:border-gray-700 transition-all duration-500 movie-item
+                                     {{ $movie->pivot->eliminated_at ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800' }}"
                                  data-movie-id="{{ $movie->id }}">
-                                <div class="flex-1">
-                                    <h4 class="font-medium">{{ $movie->title }}</h4>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        {{ $movie->director }} ({{ $movie->year }})
-                                    </p>
-                                    @if($movie->pivot->eliminated_at)
-                                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full mt-1">
-                                            Eliminated
-                                        </span>
-                                    @endif
+                                <div class="flex gap-4">
+                                    <img src="{{ $movie->poster_url ?: 'https://via.placeholder.com/150x225?text=No+Poster' }}"
+                                         alt="{{ $movie->title }}"
+                                         class="w-24 h-36 object-cover rounded-md">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-gray-900 dark:text-gray-100">{{ $movie->title }}</h4>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                                            {{ $movie->director }} ({{ $movie->year }})
+                                        </p>
+                                        @if($movie->pivot->eliminated_at)
+                                            <span class="inline-flex items-center px-2 py-1 mt-2 text-xs font-medium rounded bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200">
+                                                Eliminated
+                                            </span>
+                                        @endif
+                                        @if($movie->pivot->user_id === auth()->id() && !$room->elimination_started && !$room->elimination_in_progress)
+                                            <button onclick="removeMovie({{ $movie->id }})"
+                                                    class="mt-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition">
+                                                Remove
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
-                                @if($movie->pivot->user_id === auth()->id() && !$room->elimination_started)
-                                    <button onclick="removeMovie({{ $movie->id }})"
-                                            class="text-red-600 hover:text-red-700 transition">
-                                        Remove
-                                    </button>
-                                @endif
                             </div>
                         @endforeach
                     </div>
                 </div>
             </div>
 
-            <!-- Movie Management -->
+            <!-- Movie Search -->
             @if(!$room->elimination_started)
                 <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6">
-                        <h3 class="text-lg font-semibold mb-4">Add Movies</h3>
+                        <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Add Movies</h3>
                         <div class="flex gap-4">
                             <input type="text" id="movieSearch"
                                    class="flex-1 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
@@ -112,8 +125,8 @@
                             </button>
                         </div>
                         <div id="searchResults" class="hidden mt-4">
-                            <h4 class="font-medium mb-2">Search Results</h4>
-                            <div id="movieResults" class="divide-y dark:divide-gray-700"></div>
+                            <h4 class="font-medium mb-2 text-gray-800 dark:text-gray-200">Search Results</h4>
+                            <div id="movieResults" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                         </div>
                     </div>
                 </div>
@@ -127,9 +140,23 @@
             let eliminationInterval;
             const ELIMINATION_INTERVAL = 3000;
 
+            // Listen for elimination events
+            window.Echo.private('room.' + {{ $room->id }})
+                .listen('EliminationStarted', (e) => {
+                    document.getElementById('eliminationButton')?.setAttribute('disabled', 'disabled');
+                    document.getElementById('eliminationStatus').classList.remove('hidden');
+                    startEliminationProcess();
+                })
+                .listen('MovieEliminated', (e) => {
+                    updateUI(e.data);
+                })
+                .listen('EliminationCompleted', (e) => {
+                    clearInterval(eliminationInterval);
+                    showWinner(e.winner);
+                });
+
             async function toggleElimination() {
                 const button = document.getElementById('eliminationButton');
-
                 if (!button.disabled) {
                     try {
                         const response = await fetch(`/rooms/{{ $room->id }}/elimination/start`, {
@@ -140,11 +167,8 @@
                             }
                         });
 
-                        if (response.ok) {
-                            button.disabled = true;
-                            button.textContent = 'Elimination in Progress';
-                            document.getElementById('eliminationStatus').classList.remove('hidden');
-                            startEliminationProcess();
+                        if (!response.ok) {
+                            throw new Error('Failed to start elimination');
                         }
                     } catch (error) {
                         console.error('Error starting elimination:', error);
@@ -202,24 +226,18 @@
                 document.getElementById('remainingCount').textContent =
                     `${data.remaining_count} movies remaining`;
 
-                // Fade out eliminated movie
+                // Update eliminated movie
                 const movieElement = document.querySelector(`[data-movie-id="${data.eliminated_movie.id}"]`);
                 if (movieElement) {
-                    movieElement.classList.add('opacity-25');
-                    const eliminatedBadge = document.createElement('div');
-                    eliminatedBadge.className = 'mt-2';
-                    eliminatedBadge.innerHTML = `
-                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                            Eliminated
-                        </span>
-                    `;
-                    movieElement.querySelector('.flex-1').appendChild(eliminatedBadge);
+                    movieElement.classList.add('opacity-50', 'bg-gray-100', 'dark:bg-gray-800/50');
 
-                    // Add animation
-                    movieElement.classList.add('scale-95');
-                    setTimeout(() => {
-                        movieElement.classList.add('transform', 'rotate-3');
-                    }, 300);
+                    // Add eliminated badge if not exists
+                    if (!movieElement.querySelector('.inline-flex')) {
+                        const badge = document.createElement('span');
+                        badge.className = 'inline-flex items-center px-2 py-1 mt-2 text-xs font-medium rounded bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200';
+                        badge.textContent = 'Eliminated';
+                        movieElement.querySelector('.flex-1').appendChild(badge);
+                    }
                 }
             }
 
@@ -234,9 +252,8 @@
                              alt="${winner.title}"
                              class="w-48 h-72 object-cover rounded-lg shadow-lg">
                     </div>
-                    <h3 class="text-xl font-bold mt-4">${winner.title}</h3>
-                    <p class="text-lg">${winner.director} (${winner.year})</p>
-                    <p class="mt-2 text-gray-600 dark:text-gray-400">${winner.plot || ''}</p>
+                    <h3 class="text-xl font-bold mt-4 text-gray-900 dark:text-gray-100">${winner.title}</h3>
+                    <p class="text-gray-600 dark:text-gray-400">${winner.director} (${winner.year})</p>
                 `;
 
                 winnerDisplay.classList.remove('hidden');
@@ -268,7 +285,7 @@
                         data.eliminated_movies.forEach(movie => {
                             const movieElement = document.querySelector(`[data-movie-id="${movie.id}"]`);
                             if (movieElement) {
-                                movieElement.classList.add('opacity-25', 'scale-95', 'rotate-3');
+                                movieElement.classList.add('opacity-25');
                                 if (!movieElement.querySelector('.inline-flex')) {
                                     const eliminatedBadge = document.createElement('div');
                                     eliminatedBadge.className = 'mt-2';

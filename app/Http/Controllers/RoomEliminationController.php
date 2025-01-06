@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Room;
 use App\Models\Movie;
+use App\Events\EliminationStarted;
+use App\Events\MovieEliminated;
+use App\Events\EliminationCompleted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +29,8 @@ class RoomEliminationController extends Controller
             'last_elimination_at' => now(),
         ]);
 
+        broadcast(new EliminationStarted($room))->toOthers();
+
         return response()->json(['message' => 'Elimination started']);
     }
 
@@ -41,22 +46,24 @@ class RoomEliminationController extends Controller
 
         if ($remainingMovies <= 1) {
             $room->update(['elimination_in_progress' => false]);
+            $winner = $room->movies()
+                ->wherePivot('eliminated_at', null)
+                ->first();
+
+            broadcast(new EliminationCompleted($room, $winner))->toOthers();
+
             return response()->json([
                 'status' => 'completed',
-                'winner' => $room->movies()
-                    ->wherePivot('eliminated_at', null)
-                    ->first()
+                'winner' => $winner
             ]);
         }
 
-        // Randomly select a movie to eliminate
         $movieToEliminate = $room->movies()
             ->wherePivot('eliminated_at', null)
             ->inRandomOrder()
             ->first();
 
         if ($movieToEliminate) {
-            // Update the pivot table with elimination data
             $room->movies()->updateExistingPivot($movieToEliminate->id, [
                 'eliminated_by' => Auth::id(),
                 'eliminated_at' => now(),
@@ -64,11 +71,15 @@ class RoomEliminationController extends Controller
 
             $room->update(['last_elimination_at' => now()]);
 
-            return response()->json([
+            $data = [
                 'status' => 'eliminated',
                 'eliminated_movie' => $movieToEliminate,
                 'remaining_count' => $remainingMovies - 1
-            ]);
+            ];
+
+            broadcast(new MovieEliminated($room, $data))->toOthers();
+
+            return response()->json($data);
         }
 
         return response()->json(['error' => 'No movies to eliminate'], 422);
