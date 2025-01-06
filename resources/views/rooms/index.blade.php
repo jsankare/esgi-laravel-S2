@@ -56,6 +56,10 @@
                                                 View Room
                                             </a>
                                             @if($room->creator_id === auth()->id())
+                                                <a href="{{ route('rooms.edit', $room) }}"
+                                                class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition">
+                                                    Update
+                                                </a>
                                                 <form action="{{ route('rooms.destroy', $room) }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('DELETE')
