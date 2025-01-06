@@ -15,6 +15,20 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <!-- Add notification container at the top -->
+            <div id="notification" class="hidden fixed top-4 right-4 z-50 max-w-sm">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border-l-4 flex items-center">
+                    <div id="notification-icon" class="mr-3"></div>
+                    <div>
+                        <p id="notification-message" class="text-sm text-white font-medium"></p>
+                    </div>
+                    <button onclick="hideNotification()" class="ml-4 text-gray-400 hover:text-gray-500">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
             <!-- Movie List -->
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
@@ -311,6 +325,46 @@
                 return div;
             }
 
+            function showNotification(message, type = 'error') {
+                const notification = document.getElementById('notification');
+                const notificationMessage = document.getElementById('notification-message');
+                const notificationIcon = document.getElementById('notification-icon');
+
+                // Set message
+                notificationMessage.textContent = message;
+
+                // Set icon and colors based on type
+                if (type === 'error') {
+                    notification.querySelector('div').classList.remove('border-green-500');
+                    notification.querySelector('div').classList.add('border-red-500');
+                    notificationIcon.innerHTML = `
+                                <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            `;
+                } else {
+                    notification.querySelector('div').classList.remove('border-red-500');
+                    notification.querySelector('div').classList.add('border-green-500');
+                    notificationIcon.innerHTML = `
+                                <svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7"/>
+                                </svg>
+                            `;
+                }
+
+                // Show notification
+                notification.classList.remove('hidden');
+
+                // Hide after 3 seconds
+                setTimeout(hideNotification, 3000);
+            }
+
+            function hideNotification() {
+                document.getElementById('notification').classList.add('hidden');
+            }
+
             function addMovie(imdbId) {
                 fetch(`/rooms/{{ $room->id }}/movies`, {
                     method: 'POST',
@@ -323,9 +377,10 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.error) {
-                            alert(data.error);
+                            showNotification(data.error, 'error');
                         } else {
-                            window.location.reload();
+                            showNotification('Movie added successfully!', 'success');
+                            setTimeout(() => window.location.reload(), 1000);
                         }
                     });
             }
@@ -342,9 +397,10 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.error) {
-                            alert(data.error);
+                            showNotification(data.error, 'error');
                         } else {
-                            window.location.reload();
+                            showNotification('Movie removed successfully!', 'success');
+                            setTimeout(() => window.location.reload(), 1000);
                         }
                     });
             }
