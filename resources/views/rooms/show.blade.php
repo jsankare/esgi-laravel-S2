@@ -46,6 +46,7 @@
                                 @endif
                                 @if($room->elimination_started)
                                     <button onclick="resetElimination()"
+                                            id="resetButton"
                                             class="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition">
                                         Reset
                                     </button>
@@ -123,6 +124,13 @@
                                     class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
                                 Search
                             </button>
+                        </div>
+                        <!-- Loading Indicator -->
+                        <div id="searchLoader" class="hidden mt-4">
+                            <div class="flex items-center justify-center">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                                <span class="ml-2 text-gray-600 dark:text-gray-400">Searching...</span>
+                            </div>
                         </div>
                         <div id="searchResults" class="hidden mt-4">
                             <h4 class="font-medium mb-2 text-gray-800 dark:text-gray-200">Search Results</h4>
@@ -290,6 +298,18 @@
 
                 winnerDisplay.classList.remove('hidden');
 
+                // Keep reset button visible
+                const resetButton = document.createElement('button');
+                resetButton.id = 'resetButton';
+                resetButton.onclick = resetElimination;
+                resetButton.className = 'bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition mt-4';
+                resetButton.textContent = 'Reset';
+
+                // Only add the reset button if it doesn't already exist
+                if (!document.getElementById('resetButton')) {
+                    winnerDisplay.appendChild(resetButton);
+                }
+
                 // Trigger confetti
                 confetti({
                     particleCount: 100,
@@ -298,45 +318,14 @@
                 });
             }
 
-            // Poll for status updates to handle page refreshes
-            async function pollEliminationStatus() {
-                const response = await fetch(`/rooms/{{ $room->id }}/elimination/status`);
-                const data = await response.json();
-
-                if (data.elimination_in_progress) {
-                    document.getElementById('eliminationButton')?.setAttribute('disabled', 'disabled');
-                    document.getElementById('eliminationStatus').classList.remove('hidden');
-
-                    if (data.remaining_movies.length === 1) {
-                        showWinner(data.remaining_movies[0]);
-                    } else {
-                        document.getElementById('remainingCount').textContent =
-                            `${data.remaining_movies.length} movies remaining`;
-
-                        // Mark eliminated movies
-                        data.eliminated_movies.forEach(movie => {
-                            const movieElement = document.querySelector(`[data-movie-id="${movie.id}"]`);
-                            if (movieElement) {
-                                movieElement.classList.add('opacity-25');
-                                if (!movieElement.querySelector('.inline-flex')) {
-                                    const eliminatedBadge = document.createElement('div');
-                                    eliminatedBadge.className = 'mt-2';
-                                    eliminatedBadge.innerHTML = `
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                            Eliminated
-                                        </span>
-                                    `;
-                                    movieElement.querySelector('.flex-1').appendChild(eliminatedBadge);
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-
             function searchMovies() {
                 const search = document.getElementById('movieSearch').value;
                 if (!search) return;
+
+                // Show loader
+                document.getElementById('searchLoader').classList.remove('hidden');
+                // Hide previous results while searching
+                document.getElementById('searchResults').classList.add('hidden');
 
                 fetch(`/rooms/{{ $room->id }}/movies/search?search=${encodeURIComponent(search)}`)
                     .then(response => response.json())
@@ -349,7 +338,16 @@
                             resultsDiv.appendChild(movieCard);
                         });
 
+                        // Hide loader
+                        document.getElementById('searchLoader').classList.add('hidden');
+                        // Show results
                         document.getElementById('searchResults').classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Error searching movies:', error);
+                        // Hide loader on error
+                        document.getElementById('searchLoader').classList.add('hidden');
+                        showNotification('Error searching movies. Please try again.', 'error');
                     });
             }
 
