@@ -6,6 +6,7 @@ use App\Models\Room;
 use App\Http\Requests\StoreRoomRequest;
 use App\Http\Requests\JoinRoomRequest;
 use Illuminate\Http\Request;
+use App\Models\Message;
 
 class RoomController extends Controller
 {
@@ -40,8 +41,10 @@ class RoomController extends Controller
                 ->with('error', 'You must be a member to view room details.');
         }
 
+        $messages = Message::where('room_id', $room->id)->get();
+
         $room->load('users');
-        return view('rooms.show', compact('room'));
+        return view('rooms.show', compact('room', 'messages'));
     }
 
     public function join(JoinRoomRequest $request, Room $room)
@@ -87,18 +90,37 @@ class RoomController extends Controller
 
     public function update(Request $request, Room $room)
     {
+        // Vérification que seul le créateur peut modifier la room
         if ($room->creator_id !== auth()->id()) {
             return redirect()->route('rooms.index')
                 ->with('error', 'Only the creator can update the room.');
         }
-
+    
+        // Validation des autres champs du formulaire
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'password' => 'nullable|string|max:255',
         ]);
-
-        $room->update($validated);
-
+    
+        // Si un mot de passe actuel est spécifié et que la room a déjà un mot de passe, vérifier sa validité
+        if ($request->filled('current_password') && $room->password && $request->current_password !== $room->password) {
+            return back()->withErrors(['current_password' => 'Current password is incorrect.']);
+        }
+    
+        // Si un nouveau mot de passe est spécifié, le mettre à jour sans le hacher
+        if ($request->filled('new_password')) {
+            $room->password = $request->new_password;  // Pas de hachage ici
+        }
+    
+        // Si l'option "remove password" est cochée, retirer le mot de passe
+        if ($request->has('remove_password') && $request->remove_password) {
+            $room->password = null;  // Supprimer le mot de passe de la room
+        }
+    
+        // Mise à jour des autres informations de la room
+        $room->update([
+            'name' => $request->name,
+        ]);
+    
         return redirect()->route('rooms.index')
             ->with('success', 'Room updated successfully.');
     }

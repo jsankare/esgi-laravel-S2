@@ -134,6 +134,50 @@
         </div>
     </div>
 
+    <div id="chat" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4">Chat</h3>
+            <div id="messages" class="space-y-4">
+    @foreach($messages as $message)
+        <!-- Afficher uniquement les messages parents (sans parentMessage) -->
+        @if(!$message->parentMessage)
+            <div class="flex justify-between items-start space-x-4">
+                <div class="flex-1">
+                    <div class="font-semibold">{{ $message->user->name }}</div> <!-- Nom de l'utilisateur -->
+
+                    <!-- Affichage du message parent -->
+                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ $message->message }}</p>
+                    <button type="button" onclick="replyToMessage({{ $message->id }}, '{{ $message->user->name }}')" class="text-blue-500 hover:underline">Reply</button>
+
+                    <!-- Affichage des réponses sous le message parent -->
+                    @foreach($message->replies as $reply)
+                        <div class="ml-4 mt-2 bg-gray-100 p-2 rounded">
+                            <div class="font-semibold">{{ $reply->user->name }}</div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $reply->message }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+    @endforeach
+</div>
+
+
+            <div id="reply-to-message" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hidden">
+                <strong>Replying to:</strong> <span id="reply-user-name"></span>
+            </div>  
+
+            <form id="chatForm" class="mt-4" method="POST" action="{{ route('messages.store', $room->id) }}">
+                @csrf
+                <textarea name="message" id="message" class="w-full p-3 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" rows="4" placeholder="Type a message..." required></textarea>
+                <input type="hidden" name="parent_message_id" id="parent_message_id">
+                <button type="submit" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Send</button>
+            </form>
+
+        </div>
+    </div>
+
+
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
         <script>
@@ -420,6 +464,63 @@
                     searchMovies();
                 }
             });
+            
+            function replyToMessage(messageId, userName) {
+                // Mettre à jour le champ caché pour parent_message_id
+                document.getElementById('parent_message_id').value = messageId;
+                
+                // Afficher le message de réponse avec le nom de l'utilisateur
+                const replyMessageDiv = document.getElementById('reply-to-message');
+                const replyUserNameSpan = document.getElementById('reply-user-name');
+                replyUserNameSpan.textContent = userName;
+                replyMessageDiv.classList.remove('hidden');
+            }
+
+
+            // Cibler le formulaire
+            document.getElementById('chatForm').addEventListener('submit', function(e) {
+                // Empêcher le rechargement de la page
+                e.preventDefault();
+
+                // Récupérer les données du formulaire
+                var formData = new FormData(this);
+
+                // Créer une requête AJAX
+                fetch("{{ route('messages.store', $room->id) }}", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                    }
+                })
+                .then(response => response.json()) // Si la réponse est au format JSON
+                .then(data => {
+                    if (data.success) {
+                        // Ajouter le message à la liste sans recharger la page
+                        var messagesContainer = document.getElementById('messages');
+                        var messageHTML = `
+                            <div class="flex justify-between items-start space-x-4">
+                                <div class="flex-1">
+                                    <div class="font-semibold">${data.user_name}</div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">${data.message}</p>
+                                    <button type="button" onclick="replyToMessage(${data.id}, '${data.user_name}')" class="text-blue-500 hover:underline">Reply</button>
+                                </div>
+                            </div>
+                        `;
+                        messagesContainer.innerHTML = messageHTML + messagesContainer.innerHTML; // Ajoute en haut
+                    } else {
+                        // Gérer l'échec du message
+                        alert(data.error || 'Message could not be sent');
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Something went wrong!");
+                });
+            });
+
+            
         </script>
     @endpush
 </x-app-layout>

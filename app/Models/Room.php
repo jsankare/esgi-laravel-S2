@@ -59,4 +59,9 @@ class Room extends Model
             !$this->elimination_in_progress &&
             $this->movies()->count() > 1;
     }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
 }

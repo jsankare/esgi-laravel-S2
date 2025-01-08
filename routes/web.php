@@ -5,6 +5,7 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MovieController;
 use App\Http\Controllers\RoomMovieController;
 use App\Http\Controllers\RoomEliminationController;
+use App\Http\Controllers\MessageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -31,7 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
     Route::get('/rooms/{room}/edit', [RoomController::class, 'edit'])->name('rooms.edit');
     Route::match(['put', 'patch'], '/rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
-
+    Route::post('/rooms/{room}/sendMessage', [MessageController::class, 'storeMessage'])->name('messages.store');
 
     // Room Movies routes
     Route::get('/rooms/{room}/movies/search', [RoomMovieController::class, 'search']);
