@@ -10,7 +10,7 @@ class MovieReactionSeeder extends Seeder
 {
     public function run(): void
     {
-        $emojis = ['👍', '👎', '❤️', '😂', '😮', '😡'];
+        $emojis = ['👍', '👎', '❤️', '🤞', '🤟', '🥲', '🥳',];
 
         $rooms = Room::with(['users', 'movies'])->get();
 

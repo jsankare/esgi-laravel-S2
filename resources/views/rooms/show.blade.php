@@ -652,8 +652,7 @@
             });
 
             //Reactions
-
-            const EMOJI_LIST = ['👍', '👎', '❤️', '😂', '😮', '😡'];
+            const EMOJI_LIST = ['👍', '👎', '❤️', '🤞', '🤟', '🥲', '🥳',];
 
             function showReactionPicker(movieId) {
                 const picker = document.createElement('div');
