@@ -12,6 +12,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             MovieSeeder::class,
             RoomSeeder::class,
+            MessageSeeder::class,
+            MovieReactionSeeder::class,
         ]);
     }
 }

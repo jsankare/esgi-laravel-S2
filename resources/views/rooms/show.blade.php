@@ -79,7 +79,7 @@
                     <div id="moviesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($room->movies as $movie)
                             <div class="relative p-4 rounded-lg border dark:border-gray-700 transition-all duration-500 movie-item
-                                     {{ $movie->pivot->eliminated_at ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800' }}"
+     {{ $movie->pivot->eliminated_at ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800' }}"
                                  data-movie-id="{{ $movie->id }}">
                                 <div class="flex gap-4">
                                     <img src="{{ $movie->poster_url ?: 'https://via.placeholder.com/150x225?text=No+Poster' }}"
@@ -90,10 +90,50 @@
                                         <p class="text-sm text-gray-600 dark:text-gray-400">
                                             {{ $movie->director }} ({{ $movie->year }})
                                         </p>
+
+                                        <!-- Reactions Section -->
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            @foreach($movie->reactions->where('room_id', $room->id)->groupBy('emoji') as $emoji => $reactions)
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">
+                        {{ $emoji }} {{ $reactions->count() }}
+                    </span>
+                                            @endforeach
+                                        </div>
+
+                                        <!-- Reaction Controls -->
+                                        <div class="mt-2 relative reaction-container">
+                                            @if(!$room->elimination_started)
+                                                @php
+                                                    $userReaction = $movie->reactions
+                                                        ->where('room_id', $room->id)
+                                                        ->where('user_id', auth()->id())
+                                                        ->first();
+                                                @endphp
+
+                                                @if($userReaction)
+                                                    <button
+                                                        onclick="removeReaction({{ $movie->id }})"
+                                                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                                                    >
+                                                        {{ $userReaction->emoji }} Remove
+                                                    </button>
+                                                @else
+                                                    <button
+                                                        id="reaction-btn-{{ $movie->id }}"
+                                                        onclick="showReactionPicker({{ $movie->id }})"
+                                                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                                                    >
+                                                        Add Reaction
+                                                    </button>
+                                                @endif
+                                            @endif
+                                        </div>
+
+                                        <!-- Existing movie controls -->
                                         @if($movie->pivot->eliminated_at)
                                             <span class="inline-flex items-center px-2 py-1 mt-2 text-xs font-medium rounded bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200">
-                                                Eliminated
-                                            </span>
+                    Eliminated
+                </span>
                                         @endif
                                         @if($movie->pivot->user_id === auth()->id() && !$room->elimination_started && !$room->elimination_in_progress)
                                             <button onclick="removeMovie({{ $movie->id }})"
@@ -138,34 +178,34 @@
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">Chat</h3>
             <div id="messages" class="space-y-4">
-    @foreach($messages as $message)
-        <!-- Afficher uniquement les messages parents (sans parentMessage) -->
-        @if(!$message->parentMessage)
-            <div class="flex justify-between items-start space-x-4">
-                <div class="flex-1">
-                    <div class="font-semibold">{{ $message->user->name }}</div> <!-- Nom de l'utilisateur -->
+                @foreach($messages as $message)
+                    <!-- Afficher uniquement les messages parents (sans parentMessage) -->
+                    @if(!$message->parentMessage)
+                        <div class="flex justify-between items-start space-x-4">
+                            <div class="flex-1">
+                                <div class="font-semibold">{{ $message->user->name }}</div> <!-- Nom de l'utilisateur -->
 
-                    <!-- Affichage du message parent -->
-                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ $message->message }}</p>
-                    <button type="button" onclick="replyToMessage({{ $message->id }}, '{{ $message->user->name }}')" class="text-blue-500 hover:underline">Reply</button>
+                                <!-- Affichage du message parent -->
+                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ $message->message }}</p>
+                                <button type="button" onclick="replyToMessage({{ $message->id }}, '{{ $message->user->name }}')" class="text-blue-500 hover:underline">Reply</button>
 
-                    <!-- Affichage des réponses sous le message parent -->
-                    @foreach($message->replies as $reply)
-                        <div class="ml-4 mt-2 bg-gray-100 p-2 rounded">
-                            <div class="font-semibold">{{ $reply->user->name }}</div>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $reply->message }}</p>
+                                <!-- Affichage des réponses sous le message parent -->
+                                @foreach($message->replies as $reply)
+                                    <div class="ml-4 mt-2 bg-gray-100 p-2 rounded">
+                                        <div class="font-semibold">{{ $reply->user->name }}</div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $reply->message }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
-                    @endforeach
-                </div>
+                    @endif
+                @endforeach
             </div>
-        @endif
-    @endforeach
-</div>
 
 
             <div id="reply-to-message" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hidden">
                 <strong>Replying to:</strong> <span id="reply-user-name"></span>
-            </div>  
+            </div>
 
             <form id="chatForm" class="mt-4" method="POST" action="{{ route('messages.store', $room->id) }}">
                 @csrf
@@ -464,11 +504,11 @@
                     searchMovies();
                 }
             });
-            
+
             function replyToMessage(messageId, userName) {
                 // Mettre à jour le champ caché pour parent_message_id
                 document.getElementById('parent_message_id').value = messageId;
-                
+
                 // Afficher le message de réponse avec le nom de l'utilisateur
                 const replyMessageDiv = document.getElementById('reply-to-message');
                 const replyUserNameSpan = document.getElementById('reply-user-name');
@@ -494,12 +534,12 @@
                         "X-CSRF-TOKEN": "{{ csrf_token() }}"
                     }
                 })
-                .then(response => response.json()) // Si la réponse est au format JSON
-                .then(data => {
-                    if (data.success) {
-                        // Ajouter le message à la liste sans recharger la page
-                        var messagesContainer = document.getElementById('messages');
-                        var messageHTML = `
+                    .then(response => response.json()) // Si la réponse est au format JSON
+                    .then(data => {
+                        if (data.success) {
+                            // Ajouter le message à la liste sans recharger la page
+                            var messagesContainer = document.getElementById('messages');
+                            var messageHTML = `
                             <div class="flex justify-between items-start space-x-4">
                                 <div class="flex-1">
                                     <div class="font-semibold">${data.user_name}</div>
@@ -508,19 +548,90 @@
                                 </div>
                             </div>
                         `;
-                        messagesContainer.innerHTML = messageHTML + messagesContainer.innerHTML; // Ajoute en haut
-                    } else {
-                        // Gérer l'échec du message
-                        alert(data.error || 'Message could not be sent');
-                    }
-                })
-                .catch(error => {
-                    console.error("Error:", error);
-                    alert("Something went wrong!");
-                });
+                            messagesContainer.innerHTML = messageHTML + messagesContainer.innerHTML; // Ajoute en haut
+                        } else {
+                            // Gérer l'échec du message
+                            alert(data.error || 'Message could not be sent');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        alert("Something went wrong!");
+                    });
             });
 
-            
+            //Reactions
+
+            const EMOJI_LIST = ['👍', '👎', '❤️', '😂', '😮', '😡'];
+
+            function showReactionPicker(movieId) {
+                const picker = document.createElement('div');
+                picker.className = 'absolute bottom-full left-0 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg flex gap-2 mb-2';
+                picker.id = `reaction-picker-${movieId}`;
+
+                EMOJI_LIST.forEach(emoji => {
+                    const button = document.createElement('button');
+                    button.className = 'hover:scale-125 transition-transform';
+                    button.textContent = emoji;
+                    button.onclick = () => addReaction(movieId, emoji);
+                    picker.appendChild(button);
+                });
+
+                // Remove existing picker if any
+                const existingPicker = document.getElementById(`reaction-picker-${movieId}`);
+                if (existingPicker) {
+                    existingPicker.remove();
+                    return;
+                }
+
+                const container = document.querySelector(`[data-movie-id="${movieId}"] .reaction-container`);
+                container.appendChild(picker);
+
+                // Close picker when clicking outside
+                document.addEventListener('click', function closePicker(e) {
+                    if (!picker.contains(e.target) && e.target.id !== `reaction-btn-${movieId}`) {
+                        picker.remove();
+                        document.removeEventListener('click', closePicker);
+                    }
+                });
+            }
+
+            function addReaction(movieId, emoji) {
+                fetch(`/rooms/{{ $room->id }}/movies/${movieId}/reactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ emoji })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the picker
+                            document.getElementById(`reaction-picker-${movieId}`).remove();
+                            // Refresh the movie list or update the reactions display
+                            location.reload();
+                        }
+                    });
+            }
+
+            function removeReaction(movieId) {
+                fetch(`/rooms/{{ $room->id }}/movies/${movieId}/reactions`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        }
+                    });
+            }
+
+
         </script>
     @endpush
 </x-app-layout>

@@ -28,24 +28,26 @@ class RoomSeeder extends Seeder
                 'name' => "Movie Room $i",
                 'creator_id' => $creator->id,
                 'password' => $i % 2 === 0 ? bcrypt('password') : null, // Every other room has a password
+                'created_at' => fake()->dateTimeBetween('-2 weeks', '-1 week'),
             ]);
 
             // Add creator to room members
             $room->users()->attach($creator->id);
 
             // Add 2-3 random members to each room
-            $maxMembers = min($users->except($creator->id)->count(), 3); // Ensure no more than available
+            $maxMembers = min($users->except($creator->id)->count(), 3);
             $members = $users->except($creator->id)->random(rand(2, $maxMembers));
             foreach ($members as $member) {
                 $room->users()->attach($member->id);
             }
 
             // Add 2-4 random movies to each room
-            $maxMovies = min($movies->count(), 4); // Ensure no more than available
+            $maxMovies = min($movies->count(), 4);
             $roomMovies = $movies->random(rand(2, $maxMovies));
             foreach ($roomMovies as $movie) {
                 $room->movies()->attach($movie->id, [
-                    'user_id' => $room->users->random()->id
+                    'user_id' => $room->users->random()->id,
+                    'created_at' => fake()->dateTimeBetween($room->created_at, 'now'),
                 ]);
             }
         }
