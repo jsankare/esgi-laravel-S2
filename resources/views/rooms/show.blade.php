@@ -597,21 +597,49 @@
                         "X-CSRF-TOKEN": "{{ csrf_token() }}"
                     }
                 })
-                    .then(response => response.json()) // Si la réponse est au format JSON
+                    .then(response => response.json())
                     .then(data => {
                         if (data.success) {
                             // Ajouter le message à la liste sans recharger la page
-                            var messagesContainer = document.getElementById('messages');
                             var messageHTML = `
-                            <div class="flex justify-between items-start space-x-4">
-                                <div class="flex-1">
-                                    <div class="font-semibold">${data.user_name}</div>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">${data.message}</p>
-                                    <button type="button" onclick="replyToMessage(${data.id}, '${data.user_name}')" class="text-blue-500 hover:underline">Reply</button>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="font-semibold text-gray-800 dark:text-gray-200">${data.user_name}</span>
+                                            <span class="text-xs text-gray-500">Just now</span>
+                                        </div>
+                                        <p class="text-gray-700 dark:text-gray-300">${data.message}</p>
+                                        <button type="button"
+                                            onclick="replyToMessage(${data.id}, '${data.user_name}')"
+                                            class="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 mt-2">
+                                            Reply
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        `;
-                            messagesContainer.innerHTML = messageHTML + messagesContainer.innerHTML; // Ajoute en haut
+            `;
+
+                            // Selection du dernier message
+                            var messagesContainer = document.getElementById('messages');
+                            var lastMessage = messagesContainer.lastChild;
+
+                            // Creation du wrapper
+                            var newMessageDiv = document.createElement('div');
+                            newMessageDiv.className = 'space-y-4';
+                            newMessageDiv.innerHTML = messageHTML;
+
+                            // Insertion du message tout en bas
+                            messagesContainer.insertBefore(newMessageDiv, lastMessage);
+
+                            // Clear le field input
+                            document.getElementById('message').value = '';
+
+                            // Clear les effets de reply
+                            cancelReply();
+
+                            // Scroll
+                            newMessageDiv.scrollIntoView({ behavior: 'smooth' });
                         } else {
                             // Gérer l'échec du message
                             alert(data.error || 'Message could not be sent');
