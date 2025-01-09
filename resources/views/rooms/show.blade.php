@@ -627,8 +627,12 @@
 
             async function toggleReaction(movieId, emoji) {
                 try {
-                    const response = await fetch(`/rooms/{{ $room->id }}/movies/${movieId}/react`, {
-                        method: 'POST',
+                    const isReacted = isReactionActive(movieId, emoji);
+                    const method = isReacted ? 'DELETE' : 'POST';
+                    const url = `/rooms/{{ $room->id }}/movies/${movieId}/react`;
+
+                    const response = await fetch(url, {
+                        method: method,
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -641,7 +645,11 @@
                         if (data.success) {
                             updateReactionState(movieId, emoji, data.reaction);
                             updateReactionUI(movieId);
-                            showNotification('Reaction updated successfully!', 'success');
+                            closeReactionModal();
+                            showNotification(
+                                isReacted ? 'Reaction removed!' : 'Reaction added!',
+                                'success'
+                            );
                         }
                     } else {
                         showNotification('Failed to update reaction', 'error');
@@ -654,11 +662,22 @@
 
             function updateReactionState(movieId, emoji, reactionData) {
                 let movieReactionState = movieReactions.get(movieId) || {};
-                movieReactionState[emoji] = {
-                    count: reactionData.count,
-                    userReacted: reactionData.user_reacted
-                };
-                movieReactions.set(movieId, movieReactionState);
+
+                if (reactionData.count === 0) {
+                    // Remove the emoji entry if count is 0
+                    delete movieReactionState[emoji];
+                } else {
+                    movieReactionState[emoji] = {
+                        count: reactionData.count,
+                        userReacted: reactionData.user_reacted
+                    };
+                }
+
+                if (Object.keys(movieReactionState).length === 0) {
+                    movieReactions.delete(movieId);
+                } else {
+                    movieReactions.set(movieId, movieReactionState);
+                }
             }
 
             function updateReactionUI(movieId) {
@@ -683,18 +702,17 @@
                 if (currentMovieId === movieId) {
                     const buttons = document.querySelectorAll('#reactionButtons .reaction-btn');
                     buttons.forEach(button => {
-                        const emoji = button.textContent.trim().split('\n')[0];
-                        const count = getReactionCount(movieId, emoji);
-                        const isActive = isReactionActive(movieId, emoji);
+                        const buttonEmoji = button.textContent.trim().split('\n')[0];
+                        const reactionData = reactions[buttonEmoji] || { count: 0, userReacted: false };
 
-                        button.classList.toggle('bg-gray-100', isActive);
-                        button.classList.toggle('dark:bg-gray-700', isActive);
-                        button.querySelector('span').textContent = count;
+                        button.classList.toggle('bg-gray-100', reactionData.userReacted);
+                        button.classList.toggle('dark:bg-gray-700', reactionData.userReacted);
+                        button.querySelector('span').textContent = reactionData.count;
                     });
                 }
             }
 
-            // Load initial reactions
+            // Load initial reactions to display emojis
             async function loadInitialReactions() {
                 try {
                     const response = await fetch(`/rooms/{{ $room->id }}/reactions`);
@@ -703,7 +721,9 @@
                     // Group reactions by movie
                     reactions.forEach(reaction => {
                         const { movie_id, emoji, count, user_reacted } = reaction;
-                        updateReactionState(movie_id, emoji, { count, user_reacted });
+                        let movieReactionState = movieReactions.get(movie_id) || {};
+                        movieReactionState[emoji] = { count, userReacted: user_reacted };
+                        movieReactions.set(movie_id, movieReactionState);
                         updateReactionUI(movie_id);
                     });
                 } catch (error) {

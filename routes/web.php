@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MovieReactionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MovieController;
@@ -43,6 +44,11 @@ Route::middleware('auth')->group(function () {
     // Movies routes
     Route::get('/movies', [MovieController::class, 'index'])->name('movies.index');
     Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->name('movies.show');
+
+    // Movie Reactions routes
+    Route::post('/rooms/{room}/movies/{movie}/react', [MovieReactionController::class, 'store'])->name('movie.react');
+    Route::delete('/rooms/{room}/movies/{movie}/react', [MovieReactionController::class, 'destroy'])->name('movie.unreact');
+    Route::get('/rooms/{room}/reactions', [MovieReactionController::class, 'index'])->name('movie.reactions');
 
     // Room Elimination routes
     Route::post('/rooms/{room}/elimination/start', [RoomEliminationController::class, 'start']);
