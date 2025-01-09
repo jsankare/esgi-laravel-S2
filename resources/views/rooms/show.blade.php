@@ -415,50 +415,6 @@
                 replyMessageDiv.classList.remove('hidden');
             }
 
-
-            // Cibler le formulaire
-            document.getElementById('chatForm').addEventListener('submit', function(e) {
-                // Empêcher le rechargement de la page
-                e.preventDefault();
-
-                // Récupérer les données du formulaire
-                var formData = new FormData(this);
-
-                // Créer une requête AJAX
-                fetch("{{ route('messages.store', $room->id) }}", {
-                    method: "POST",
-                    body: formData,
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest",
-                        "X-CSRF-TOKEN": "{{ csrf_token() }}"
-                    }
-                })
-                .then(response => response.json()) // Si la réponse est au format JSON
-                .then(data => {
-                    if (data.success) {
-                        // Ajouter le message à la liste sans recharger la page
-                        var messagesContainer = document.getElementById('messages');
-                        var messageHTML = `
-                            <div class="flex justify-between items-start space-x-4">
-                                <div class="flex-1">
-                                    <div class="font-semibold">${data.user_name}</div>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">${data.message}</p>
-                                    <button type="button" onclick="replyToMessage(${data.id}, '${data.user_name}')" class="text-blue-500 hover:underline">Reply</button>
-                                </div>
-                            </div>
-                        `;
-                        messagesContainer.innerHTML = messageHTML + messagesContainer.innerHTML; // Ajoute en haut
-                    } else {
-                        // Gérer l'échec du message
-                        alert(data.error || 'Message could not be sent');
-                    }
-                })
-                .catch(error => {
-                    console.error("Error:", error);
-                    alert("Something went wrong!");
-                });
-            });
-
             
         </script>
     @endpush

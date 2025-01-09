@@ -21,7 +21,7 @@ class MessageController extends Controller
 
     // Méthode pour envoyer un message
     public function storeMessage(Request $request, $roomId)
-{
+    {
     $validated = $request->validate([
         'message' => 'required|string',
         'parent_message_id' => 'nullable|exists:messages,id'
@@ -35,19 +35,10 @@ class MessageController extends Controller
             'message' => $validated['message'],
             'parent_message_id' => $validated['parent_message_id']
         ]);
+        return redirect()->route('rooms.show', $room)->with('success', 'Message sent successfully.');
 
-        // Retourner une réponse JSON avec les données nécessaires pour mettre à jour la page
-        return response()->json([
-            'success' => true,
-            'user_name' => $message->user->name,
-            'message' => $message->message
-        ]);
     } catch (\Exception $e) {
-        // Si une erreur se produit, retourner une réponse JSON avec un message d'erreur
-        return response()->json([
-            'success' => false,
-            'error' => 'Message could not be sent'
-        ], 500);
+        return back()->with('error', 'An error occurred while sending the message.');
     }
 }
 
