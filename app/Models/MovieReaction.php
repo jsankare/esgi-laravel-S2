@@ -7,17 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MovieReaction extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'room_id',
-        'movie_id',
-        'emoji'
-    ];
-
-    // List of supported emojis that work across all systems
-    public static $supportedEmojis = [
-        '👍', '👎', '❤️', '😂', '😮', '😢', '🤔', '🎬'
-    ];
+    protected $fillable = ['user_id', 'room_id', 'movie_id', 'emoji'];
 
     public function user(): BelongsTo
     {

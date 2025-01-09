@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
 
 class Movie extends Model
@@ -20,11 +21,6 @@ class Movie extends Model
         'poster_url',
     ];
 
-    /**
-     * Get the indexable data array for the model.
-     *
-     * @return array
-     */
     public function toSearchableArray()
     {
         return [
@@ -36,13 +32,15 @@ class Movie extends Model
         ];
     }
 
-    /**
-     * Get the rooms where this movie exists.
-     */
     public function rooms(): BelongsToMany
     {
         return $this->belongsToMany(Room::class, 'room_movie')
             ->withPivot(['user_id', 'eliminated_by', 'eliminated_at'])
             ->withTimestamps();
+    }
+
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(MovieReaction::class);
     }
 }

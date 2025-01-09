@@ -46,7 +46,6 @@
                                 @endif
                                 @if($room->elimination_started)
                                     <button onclick="resetElimination()"
-                                            id="resetButton"
                                             class="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition">
                                         Reset
                                     </button>
@@ -80,7 +79,7 @@
                     <div id="moviesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($room->movies as $movie)
                             <div class="relative p-4 rounded-lg border dark:border-gray-700 transition-all duration-500 movie-item
-                 {{ $movie->pivot->eliminated_at ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800' }}"
+     {{ $movie->pivot->eliminated_at ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800' }}"
                                  data-movie-id="{{ $movie->id }}">
                                 <div class="flex gap-4">
                                     <img src="{{ $movie->poster_url ?: 'https://via.placeholder.com/150x225?text=No+Poster' }}"
@@ -92,20 +91,49 @@
                                             {{ $movie->director }} ({{ $movie->year }})
                                         </p>
 
-                                        <!-- Active Reactions Display -->
-                                        <div class="mt-2 flex flex-wrap gap-1" id="active-reactions-{{ $movie->id }}"></div>
+                                        <!-- Reactions Section -->
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            @foreach($movie->reactions->where('room_id', $room->id)->groupBy('emoji') as $emoji => $reactions)
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">
+                        {{ $emoji }} {{ $reactions->count() }}
+                    </span>
+                                            @endforeach
+                                        </div>
 
-                                        <!-- React Button -->
-                                        <button
-                                            onclick="openReactionModal('{{ $movie->id }}')"
-                                            class="mt-2 text-sm bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 transition-colors">
-                                            React
-                                        </button>
+                                        <!-- Reaction Controls -->
+                                        <div class="mt-2 relative reaction-container">
+                                            @if(!$room->elimination_started)
+                                                @php
+                                                    $userReaction = $movie->reactions
+                                                        ->where('room_id', $room->id)
+                                                        ->where('user_id', auth()->id())
+                                                        ->first();
+                                                @endphp
 
+                                                @if($userReaction)
+                                                    <button
+                                                        onclick="removeReaction({{ $movie->id }})"
+                                                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                                                    >
+                                                        {{ $userReaction->emoji }} Remove
+                                                    </button>
+                                                @else
+                                                    <button
+                                                        id="reaction-btn-{{ $movie->id }}"
+                                                        onclick="showReactionPicker({{ $movie->id }})"
+                                                        class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                                                    >
+                                                        Add Reaction
+                                                    </button>
+                                                @endif
+                                            @endif
+                                        </div>
+
+                                        <!-- Existing movie controls -->
                                         @if($movie->pivot->eliminated_at)
                                             <span class="inline-flex items-center px-2 py-1 mt-2 text-xs font-medium rounded bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200">
-                            Eliminated
-                        </span>
+                    Eliminated
+                </span>
                                         @endif
                                         @if($movie->pivot->user_id === auth()->id() && !$room->elimination_started && !$room->elimination_in_progress)
                                             <button onclick="removeMovie({{ $movie->id }})"
@@ -117,21 +145,6 @@
                                 </div>
                             </div>
                         @endforeach
-                    </div>
-
-                    <!-- Reaction Modal -->
-                    <div id="reactionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Reaction</h3>
-                                <button onclick="closeReactionModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="grid grid-cols-4 gap-4" id="reactionButtons"></div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -151,13 +164,6 @@
                                 Search
                             </button>
                         </div>
-                        <!-- Loading Indicator -->
-                        <div id="searchLoader" class="hidden mt-4">
-                            <div class="flex items-center justify-center">
-                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                                <span class="ml-2 text-gray-600 dark:text-gray-400">Searching...</span>
-                            </div>
-                        </div>
                         <div id="searchResults" class="hidden mt-4">
                             <h4 class="font-medium mb-2 text-gray-800 dark:text-gray-200">Search Results</h4>
                             <div id="movieResults" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -172,29 +178,29 @@
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">Chat</h3>
             <div id="messages" class="space-y-4">
-    @foreach($messages as $message)
-        <!-- Afficher uniquement les messages parents (sans parentMessage) -->
-        @if(!$message->parentMessage)
-            <div class="flex justify-between items-start space-x-4">
-                <div class="flex-1">
-                    <div class="font-semibold">{{ $message->user->name }}</div> <!-- Nom de l'utilisateur -->
+                @foreach($messages as $message)
+                    <!-- Afficher uniquement les messages parents (sans parentMessage) -->
+                    @if(!$message->parentMessage)
+                        <div class="flex justify-between items-start space-x-4">
+                            <div class="flex-1">
+                                <div class="font-semibold">{{ $message->user->name }}</div> <!-- Nom de l'utilisateur -->
 
-                    <!-- Affichage du message parent -->
-                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ $message->message }}</p>
-                    <button type="button" onclick="replyToMessage({{ $message->id }}, '{{ $message->user->name }}')" class="text-blue-500 hover:underline">Reply</button>
+                                <!-- Affichage du message parent -->
+                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ $message->message }}</p>
+                                <button type="button" onclick="replyToMessage({{ $message->id }}, '{{ $message->user->name }}')" class="text-blue-500 hover:underline">Reply</button>
 
-                    <!-- Affichage des réponses sous le message parent -->
-                    @foreach($message->replies as $reply)
-                        <div class="ml-4 mt-2 bg-gray-100 p-2 rounded">
-                            <div class="font-semibold">{{ $reply->user->name }}</div>
-                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $reply->message }}</p>
+                                <!-- Affichage des réponses sous le message parent -->
+                                @foreach($message->replies as $reply)
+                                    <div class="ml-4 mt-2 bg-gray-100 p-2 rounded">
+                                        <div class="font-semibold">{{ $reply->user->name }}</div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $reply->message }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
-                    @endforeach
-                </div>
+                    @endif
+                @endforeach
             </div>
-        @endif
-    @endforeach
-</div>
 
 
             <div id="reply-to-message" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hidden">
@@ -324,17 +330,6 @@
 
                 winnerDisplay.classList.remove('hidden');
 
-                // Keep reset button visible
-                const resetButton = document.createElement('button');
-                resetButton.id = 'resetButton';
-                resetButton.onclick = resetElimination;
-                resetButton.className = 'bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition mt-4';
-                resetButton.textContent = 'Reset';
-                // Only add the reset button if it doesn't already exist
-                if (!document.getElementById('resetButton')) {
-                    winnerDisplay.appendChild(resetButton);
-                }
-
                 // Trigger confetti
                 confetti({
                     particleCount: 100,
@@ -383,11 +378,6 @@
                 const search = document.getElementById('movieSearch').value;
                 if (!search) return;
 
-                // Show loader
-                document.getElementById('searchLoader').classList.remove('hidden');
-                // Hide previous results while searching
-                document.getElementById('searchResults').classList.add('hidden');
-
                 fetch(`/rooms/{{ $room->id }}/movies/search?search=${encodeURIComponent(search)}`)
                     .then(response => response.json())
                     .then(data => {
@@ -399,16 +389,7 @@
                             resultsDiv.appendChild(movieCard);
                         });
 
-                        // Hide loader
-                        document.getElementById('searchLoader').classList.add('hidden');
-                        // Show results
                         document.getElementById('searchResults').classList.remove('hidden');
-                    })
-                    .catch(error => {
-                        console.error('Error searching movies:', error);
-                        // Hide loader on error
-                        document.getElementById('searchLoader').classList.add('hidden');
-                        showNotification('Error searching movies. Please try again.', 'error');
                     });
             }
 
@@ -553,12 +534,12 @@
                         "X-CSRF-TOKEN": "{{ csrf_token() }}"
                     }
                 })
-                .then(response => response.json()) // Si la réponse est au format JSON
-                .then(data => {
-                    if (data.success) {
-                        // Ajouter le message à la liste sans recharger la page
-                        var messagesContainer = document.getElementById('messages');
-                        var messageHTML = `
+                    .then(response => response.json()) // Si la réponse est au format JSON
+                    .then(data => {
+                        if (data.success) {
+                            // Ajouter le message à la liste sans recharger la page
+                            var messagesContainer = document.getElementById('messages');
+                            var messageHTML = `
                             <div class="flex justify-between items-start space-x-4">
                                 <div class="flex-1">
                                     <div class="font-semibold">${data.user_name}</div>
@@ -567,204 +548,88 @@
                                 </div>
                             </div>
                         `;
-                        messagesContainer.innerHTML = messageHTML + messagesContainer.innerHTML; // Ajoute en haut
-                    } else {
-                        // Gérer l'échec du message
-                        alert(data.error || 'Message could not be sent');
+                            messagesContainer.innerHTML = messageHTML + messagesContainer.innerHTML; // Ajoute en haut
+                        } else {
+                            // Gérer l'échec du message
+                            alert(data.error || 'Message could not be sent');
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        alert("Something went wrong!");
+                    });
+            });
+
+            //Reactions
+
+            const EMOJI_LIST = ['👍', '👎', '❤️', '😂', '😮', '😡'];
+
+            function showReactionPicker(movieId) {
+                const picker = document.createElement('div');
+                picker.className = 'absolute bottom-full left-0 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg flex gap-2 mb-2';
+                picker.id = `reaction-picker-${movieId}`;
+
+                EMOJI_LIST.forEach(emoji => {
+                    const button = document.createElement('button');
+                    button.className = 'hover:scale-125 transition-transform';
+                    button.textContent = emoji;
+                    button.onclick = () => addReaction(movieId, emoji);
+                    picker.appendChild(button);
+                });
+
+                // Remove existing picker if any
+                const existingPicker = document.getElementById(`reaction-picker-${movieId}`);
+                if (existingPicker) {
+                    existingPicker.remove();
+                    return;
+                }
+
+                const container = document.querySelector(`[data-movie-id="${movieId}"] .reaction-container`);
+                container.appendChild(picker);
+
+                // Close picker when clicking outside
+                document.addEventListener('click', function closePicker(e) {
+                    if (!picker.contains(e.target) && e.target.id !== `reaction-btn-${movieId}`) {
+                        picker.remove();
+                        document.removeEventListener('click', closePicker);
+                    }
+                });
+            }
+
+            function addReaction(movieId, emoji) {
+                fetch(`/rooms/{{ $room->id }}/movies/${movieId}/reactions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ emoji })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the picker
+                            document.getElementById(`reaction-picker-${movieId}`).remove();
+                            // Refresh the movie list or update the reactions display
+                            location.reload();
+                        }
+                    });
+            }
+
+            function removeReaction(movieId) {
+                fetch(`/rooms/{{ $room->id }}/movies/${movieId}/reactions`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     }
                 })
-                .catch(error => {
-                    console.error("Error:", error);
-                    alert("Something went wrong!");
-                });
-            });
-
-            const SUPPORTED_EMOJIS = ['👍', '👎', '❤️', '😂', '😮', '😢', '🤔', '🎬'];
-            let currentMovieId = null;
-            const movieReactions = new Map(); // Store reactions for each movie
-
-            function openReactionModal(movieId) {
-                currentMovieId = movieId;
-                const modal = document.getElementById('reactionModal');
-                const buttonsContainer = document.getElementById('reactionButtons');
-
-                // Clear existing buttons
-                buttonsContainer.innerHTML = '';
-
-                // Create reaction buttons
-                SUPPORTED_EMOJIS.forEach(emoji => {
-                    const button = document.createElement('button');
-                    button.className = `reaction-btn p-4 text-2xl rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
-            ${isReactionActive(movieId, emoji) ? 'bg-gray-100 dark:bg-gray-700' : ''}`;
-                    button.onclick = () => toggleReaction(movieId, emoji);
-
-                    const count = getReactionCount(movieId, emoji);
-                    button.innerHTML = `
-            ${emoji}
-            <span class="block text-xs mt-1 text-gray-600 dark:text-gray-400">${count}</span>
-        `;
-
-                    buttonsContainer.appendChild(button);
-                });
-
-                modal.classList.remove('hidden');
-            }
-
-            function closeReactionModal() {
-                document.getElementById('reactionModal').classList.add('hidden');
-                currentMovieId = null;
-            }
-
-            function isReactionActive(movieId, emoji) {
-                const reactions = movieReactions.get(movieId) || {};
-                return reactions[emoji]?.userReacted || false;
-            }
-
-            function getReactionCount(movieId, emoji) {
-                const reactions = movieReactions.get(movieId) || {};
-                return reactions[emoji]?.count || 0;
-            }
-
-            async function toggleReaction(movieId, emoji) {
-                try {
-                    const isReacted = isReactionActive(movieId, emoji);
-                    const method = isReacted ? 'DELETE' : 'POST';
-                    const url = `/rooms/{{ $room->id }}/movies/${movieId}/react`;
-
-                    const response = await fetch(url, {
-                        method: method,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({ emoji })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
+                    .then(response => response.json())
+                    .then(data => {
                         if (data.success) {
-                            updateReactionState(movieId, emoji, data.reaction);
-                            updateReactionUI(movieId);
-                            closeReactionModal();
-                            showNotification(
-                                isReacted ? 'Reaction removed!' : 'Reaction added!',
-                                'success'
-                            );
-                        }
-                    } else {
-                        showNotification('Failed to update reaction', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error toggling reaction:', error);
-                    showNotification('Error updating reaction', 'error');
-                }
-            }
-
-            function updateReactionState(movieId, emoji, reactionData) {
-                let movieReactionState = movieReactions.get(movieId) || {};
-
-                if (reactionData.user_reacted) {
-                    // Remove only the user's previous reaction for this movie
-                    Object.keys(movieReactionState).forEach(existingEmoji => {
-                        if (movieReactionState[existingEmoji]?.userReacted) {
-                            const currentCount = movieReactionState[existingEmoji].count;
-                            if (currentCount <= 1) {
-                                delete movieReactionState[existingEmoji];
-                            } else {
-                                movieReactionState[existingEmoji] = {
-                                    count: currentCount - 1,
-                                    userReacted: false
-                                };
-                            }
+                            location.reload();
                         }
                     });
-                }
-
-                // Update the new reaction
-                if (reactionData.count === 0) {
-                    delete movieReactionState[emoji];
-                } else {
-                    movieReactionState[emoji] = {
-                        count: reactionData.count,
-                        userReacted: reactionData.user_reacted
-                    };
-                }
-
-                if (Object.keys(movieReactionState).length === 0) {
-                    movieReactions.delete(movieId);
-                } else {
-                    movieReactions.set(movieId, movieReactionState);
-                }
             }
-
-            function updateReactionUI(movieId) {
-                // Update active reactions display
-                const activeReactionsContainer = document.getElementById(`active-reactions-${movieId}`);
-                const reactions = movieReactions.get(movieId) || {};
-
-                activeReactionsContainer.innerHTML = '';
-
-                Object.entries(reactions)
-                    .filter(([_, data]) => data.count > 0)
-                    .forEach(([emoji, data]) => {
-                        const badge = document.createElement('span');
-                        badge.className = `inline-flex items-center px-2 py-1 rounded-full text-sm
-                ${data.userReacted ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`;
-                        badge.innerHTML = `${emoji} ${data.count}`;
-                        activeReactionsContainer.appendChild(badge);
-                    });
-
-                // Update modal buttons if modal is open
-                if (currentMovieId === movieId) {
-                    const buttons = document.querySelectorAll('#reactionButtons .reaction-btn');
-                    buttons.forEach(button => {
-                        const buttonEmoji = button.textContent.trim().split('\n')[0];
-                        const reactionData = reactions[buttonEmoji] || { count: 0, userReacted: false };
-
-                        button.classList.toggle('bg-gray-100', reactionData.userReacted);
-                        button.classList.toggle('dark:bg-gray-700', reactionData.userReacted);
-                        button.querySelector('span').textContent = reactionData.count;
-                    });
-                }
-            }
-
-            // Load initial reactions to display emojis
-            async function loadInitialReactions() {
-                try {
-                    const response = await fetch(`/rooms/{{ $room->id }}/reactions`);
-                    const reactions = await response.json();
-
-                    // Clear existing reactions
-                    movieReactions.clear();
-
-                    // Group reactions by movie
-                    reactions.forEach(reaction => {
-                        const { movie_id, emoji, count, user_reacted } = reaction;
-                        let movieReactionState = movieReactions.get(movie_id) || {};
-
-                        movieReactionState[emoji] = {
-                            count: count,
-                            userReacted: user_reacted
-                        };
-
-                        movieReactions.set(movie_id, movieReactionState);
-                        updateReactionUI(movie_id);
-                    });
-                } catch (error) {
-                    console.error('Error loading reactions:', error);
-                }
-            }
-
-            // Initialize reactions when page loads
-            document.addEventListener('DOMContentLoaded', loadInitialReactions);
-
-            // Close modal when clicking outside
-            document.getElementById('reactionModal').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('reactionModal')) {
-                    closeReactionModal();
-                }
-            });
 
 
         </script>

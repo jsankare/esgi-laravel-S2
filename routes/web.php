@@ -46,9 +46,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/movies/{imdbId}', [MovieController::class, 'show'])->name('movies.show');
 
     // Movie Reactions routes
-    Route::post('/rooms/{room}/movies/{movie}/react', [MovieReactionController::class, 'store'])->name('movie.react');
-    Route::delete('/rooms/{room}/movies/{movie}/react', [MovieReactionController::class, 'destroy'])->name('movie.unreact');
-    Route::get('/rooms/{room}/reactions', [MovieReactionController::class, 'index'])->name('movie.reactions');
+    Route::post('/rooms/{room}/movies/{movie}/reactions', [MovieReactionController::class, 'store'])->name('movie.reactions.store');
+    Route::delete('/rooms/{room}/movies/{movie}/reactions', [MovieReactionController::class, 'destroy'])->name('movie.reactions.destroy');
 
     // Room Elimination routes
     Route::post('/rooms/{room}/elimination/start', [RoomEliminationController::class, 'start']);
