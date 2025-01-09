@@ -663,8 +663,25 @@
             function updateReactionState(movieId, emoji, reactionData) {
                 let movieReactionState = movieReactions.get(movieId) || {};
 
+                if (reactionData.user_reacted) {
+                    // Remove only the user's previous reaction for this movie
+                    Object.keys(movieReactionState).forEach(existingEmoji => {
+                        if (movieReactionState[existingEmoji]?.userReacted) {
+                            const currentCount = movieReactionState[existingEmoji].count;
+                            if (currentCount <= 1) {
+                                delete movieReactionState[existingEmoji];
+                            } else {
+                                movieReactionState[existingEmoji] = {
+                                    count: currentCount - 1,
+                                    userReacted: false
+                                };
+                            }
+                        }
+                    });
+                }
+
+                // Update the new reaction
                 if (reactionData.count === 0) {
-                    // Remove the emoji entry if count is 0
                     delete movieReactionState[emoji];
                 } else {
                     movieReactionState[emoji] = {
@@ -718,11 +735,19 @@
                     const response = await fetch(`/rooms/{{ $room->id }}/reactions`);
                     const reactions = await response.json();
 
+                    // Clear existing reactions
+                    movieReactions.clear();
+
                     // Group reactions by movie
                     reactions.forEach(reaction => {
                         const { movie_id, emoji, count, user_reacted } = reaction;
                         let movieReactionState = movieReactions.get(movie_id) || {};
-                        movieReactionState[emoji] = { count, userReacted: user_reacted };
+
+                        movieReactionState[emoji] = {
+                            count: count,
+                            userReacted: user_reacted
+                        };
+
                         movieReactions.set(movie_id, movieReactionState);
                         updateReactionUI(movie_id);
                     });

@@ -15,21 +15,18 @@ class MovieReactionController extends Controller
         $reactions = MovieReaction::where('room_id', $room->id)
             ->with('user')
             ->get()
-            ->map(function ($reaction) {
-                return [
-                    'movie_id' => $reaction->movie_id,
-                    'emoji' => $reaction->emoji,
-                    'count' => MovieReaction::where('room_id', $reaction->room_id)
-                        ->where('movie_id', $reaction->movie_id)
-                        ->where('emoji', $reaction->emoji)
-                        ->count(),
-                    'user_reacted' => $reaction->user_id === Auth::id()
-                ];
+            ->groupBy(['movie_id', 'emoji'])
+            ->map(function ($movieReactions) use ($room) {
+                return $movieReactions->map(function ($emojiReactions) {
+                    return [
+                        'movie_id' => $emojiReactions->first()->movie_id,
+                        'emoji' => $emojiReactions->first()->emoji,
+                        'count' => $emojiReactions->count(),
+                        'user_reacted' => $emojiReactions->contains('user_id', Auth::id())
+                    ];
+                })->values();
             })
-            ->unique(function ($reaction) {
-                return $reaction['movie_id'] . $reaction['emoji'];
-            })
-            ->values();
+            ->flatten(1);
 
         return response()->json($reactions);
     }
@@ -44,28 +41,20 @@ class MovieReactionController extends Controller
             }],
         ]);
 
-        // Check if user already has this reaction
-        $existingReaction = MovieReaction::where([
+        // Remove user reaction
+        MovieReaction::where([
+            'user_id' => Auth::id(),
+            'room_id' => $room->id,
+            'movie_id' => $movie->id,
+        ])->delete();
+
+        // Create new reaction
+        MovieReaction::create([
             'user_id' => Auth::id(),
             'room_id' => $room->id,
             'movie_id' => $movie->id,
             'emoji' => $validated['emoji']
-        ])->first();
-
-        if ($existingReaction) {
-            // If reaction exists, remove it (toggle behavior)
-            $existingReaction->delete();
-            $userReacted = false;
-        } else {
-            // Create new reaction
-            MovieReaction::create([
-                'user_id' => Auth::id(),
-                'room_id' => $room->id,
-                'movie_id' => $movie->id,
-                'emoji' => $validated['emoji']
-            ]);
-            $userReacted = true;
-        }
+        ]);
 
         $count = MovieReaction::where('room_id', $room->id)
             ->where('movie_id', $movie->id)
@@ -76,7 +65,7 @@ class MovieReactionController extends Controller
             'success' => true,
             'reaction' => [
                 'count' => $count,
-                'user_reacted' => $userReacted
+                'user_reacted' => true
             ]
         ]);
     }
