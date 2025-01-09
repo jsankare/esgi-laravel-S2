@@ -56,9 +56,7 @@ class RoomController extends Controller
 
         // Check password if room has one
         if ($room->password && $request->password !== $room->password) {
-            return back()->withErrors([
-                'password' => 'Incorrect password.',
-            ]);
+            return back()->with('password_error', 'Incorrect password for room.');
         }
 
         $room->users()->attach(auth()->id());
@@ -95,32 +93,32 @@ class RoomController extends Controller
             return redirect()->route('rooms.index')
                 ->with('error', 'Only the creator can update the room.');
         }
-    
+
         // Validation des autres champs du formulaire
         $validated = $request->validate([
             'name' => 'required|string|max:255',
         ]);
-    
+
         // Si un mot de passe actuel est spécifié et que la room a déjà un mot de passe, vérifier sa validité
         if ($request->filled('current_password') && $room->password && $request->current_password !== $room->password) {
             return back()->withErrors(['current_password' => 'Current password is incorrect.']);
         }
-    
+
         // Si un nouveau mot de passe est spécifié, le mettre à jour sans le hacher
         if ($request->filled('new_password')) {
             $room->password = $request->new_password;  // Pas de hachage ici
         }
-    
+
         // Si l'option "remove password" est cochée, retirer le mot de passe
         if ($request->has('remove_password') && $request->remove_password) {
             $room->password = null;  // Supprimer le mot de passe de la room
         }
-    
+
         // Mise à jour des autres informations de la room
         $room->update([
             'name' => $request->name,
         ]);
-    
+
         return redirect()->route('rooms.index')
             ->with('success', 'Room updated successfully.');
     }
