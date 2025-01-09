@@ -11,6 +11,11 @@
     </x-slot>
 
     <div class="py-12">
+        @if(session('password_error'))
+            <div class="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                <span class="block sm:inline">{{ session('password_error') }}</span>
+            </div>
+        @endif
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 dark:text-gray-100">

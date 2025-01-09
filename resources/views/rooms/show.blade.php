@@ -182,46 +182,75 @@
         </div>
     </div>
 
-    <div id="chat" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+    <div id="chat" class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mt-6">
         <div class="p-6">
-            <h3 class="text-lg font-semibold mb-4">Chat</h3>
-            <div id="messages" class="space-y-4">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Chat</h3>
+
+            <!-- Messages Container -->
+            <div id="messages" class="space-y-4 max-h-[500px] overflow-y-auto mb-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 @foreach($messages as $message)
-                    <!-- Afficher uniquement les messages parents (sans parentMessage) -->
                     @if(!$message->parentMessage)
-                        <div class="flex justify-between items-start space-x-4">
-                            <div class="flex-1">
-                                <div class="font-semibold">{{ $message->user->name }}</div> <!-- Nom de l'utilisateur -->
-
-                                <!-- Affichage du message parent -->
-                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ $message->message }}</p>
-                                <button type="button" onclick="replyToMessage({{ $message->id }}, '{{ $message->user->name }}')" class="text-blue-500 hover:underline">Reply</button>
-
-                                <!-- Affichage des réponses sous le message parent -->
-                                @foreach($message->replies as $reply)
-                                    <div class="ml-4 mt-2 bg-gray-100 p-2 rounded">
-                                        <div class="font-semibold">{{ $reply->user->name }}</div>
-                                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $reply->message }}</p>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ $message->user->name }}</span>
+                                        <span class="text-xs text-gray-500">{{ $message->created_at->diffForHumans() }}</span>
                                     </div>
-                                @endforeach
+                                    <p class="text-gray-700 dark:text-gray-300">{{ $message->message }}</p>
+                                    <button type="button"
+                                            onclick="replyToMessage({{ $message->id }}, '{{ $message->user->name }}')"
+                                            class="text-sm text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 mt-2">
+                                        Reply
+                                    </button>
+
+                                    <!-- Replies -->
+                                    @foreach($message->replies as $reply)
+                                        <div class="ml-8 mt-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span class="font-semibold text-gray-800 dark:text-gray-200">{{ $reply->user->name }}</span>
+                                                <span class="text-xs text-gray-500">{{ $reply->created_at->diffForHumans() }}</span>
+                                            </div>
+                                            <p class="text-gray-700 dark:text-gray-300">{{ $reply->message }}</p>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
                     @endif
                 @endforeach
             </div>
 
-
-            <div id="reply-to-message" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hidden">
-                <strong>Replying to:</strong> <span id="reply-user-name"></span>
+            <!-- Reply Indicator -->
+            <div id="reply-to-message" class="hidden mb-2 p-2 bg-indigo-50 dark:bg-indigo-900/50 rounded-lg">
+                <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600 dark:text-gray-400">
+                    <strong>Replying to:</strong> <span id="reply-user-name"></span>
+                </span>
+                    <button onclick="cancelReply()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
+            <!-- Message Form -->
             <form id="chatForm" class="mt-4" method="POST" action="{{ route('messages.store', $room->id) }}">
                 @csrf
-                <textarea name="message" id="message" class="w-full p-3 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" rows="4" placeholder="Type a message..." required></textarea>
+                <textarea
+                    name="message"
+                    id="message"
+                    class="w-full p-3 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                    rows="3"
+                    placeholder="Type your message..."
+                    required
+                ></textarea>
                 <input type="hidden" name="parent_message_id" id="parent_message_id">
-                <button type="submit" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Send</button>
+                <button type="submit" class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                    Send Message
+                </button>
             </form>
-
         </div>
     </div>
 
@@ -546,6 +575,10 @@
                 replyMessageDiv.classList.remove('hidden');
             }
 
+            function cancelReply() {
+                document.getElementById('reply-to-message').classList.add('hidden');
+                document.getElementById('parent_message_id').value = '';
+            }
 
             // Cibler le formulaire
             document.getElementById('chatForm').addEventListener('submit', function(e) {
