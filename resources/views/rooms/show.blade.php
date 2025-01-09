@@ -80,7 +80,7 @@
                     <div id="moviesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($room->movies as $movie)
                             <div class="relative p-4 rounded-lg border dark:border-gray-700 transition-all duration-500 movie-item
-                                     {{ $movie->pivot->eliminated_at ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800' }}"
+                 {{ $movie->pivot->eliminated_at ? 'opacity-50 bg-gray-100 dark:bg-gray-800/50' : 'bg-white dark:bg-gray-800' }}"
                                  data-movie-id="{{ $movie->id }}">
                                 <div class="flex gap-4">
                                     <img src="{{ $movie->poster_url ?: 'https://via.placeholder.com/150x225?text=No+Poster' }}"
@@ -91,10 +91,21 @@
                                         <p class="text-sm text-gray-600 dark:text-gray-400">
                                             {{ $movie->director }} ({{ $movie->year }})
                                         </p>
+
+                                        <!-- Active Reactions Display -->
+                                        <div class="mt-2 flex flex-wrap gap-1" id="active-reactions-{{ $movie->id }}"></div>
+
+                                        <!-- React Button -->
+                                        <button
+                                            onclick="openReactionModal('{{ $movie->id }}')"
+                                            class="mt-2 text-sm bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 transition-colors">
+                                            React
+                                        </button>
+
                                         @if($movie->pivot->eliminated_at)
                                             <span class="inline-flex items-center px-2 py-1 mt-2 text-xs font-medium rounded bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200">
-                                                Eliminated
-                                            </span>
+                            Eliminated
+                        </span>
                                         @endif
                                         @if($movie->pivot->user_id === auth()->id() && !$room->elimination_started && !$room->elimination_in_progress)
                                             <button onclick="removeMovie({{ $movie->id }})"
@@ -106,6 +117,21 @@
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+
+                    <!-- Reaction Modal -->
+                    <div id="reactionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Reaction</h3>
+                                <button onclick="closeReactionModal()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-4 gap-4" id="reactionButtons"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -551,6 +577,148 @@
                     console.error("Error:", error);
                     alert("Something went wrong!");
                 });
+            });
+
+            const SUPPORTED_EMOJIS = ['👍', '👎', '❤️', '😂', '😮', '😢', '🤔', '🎬'];
+            let currentMovieId = null;
+            const movieReactions = new Map(); // Store reactions for each movie
+
+            function openReactionModal(movieId) {
+                currentMovieId = movieId;
+                const modal = document.getElementById('reactionModal');
+                const buttonsContainer = document.getElementById('reactionButtons');
+
+                // Clear existing buttons
+                buttonsContainer.innerHTML = '';
+
+                // Create reaction buttons
+                SUPPORTED_EMOJIS.forEach(emoji => {
+                    const button = document.createElement('button');
+                    button.className = `reaction-btn p-4 text-2xl rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
+            ${isReactionActive(movieId, emoji) ? 'bg-gray-100 dark:bg-gray-700' : ''}`;
+                    button.onclick = () => toggleReaction(movieId, emoji);
+
+                    const count = getReactionCount(movieId, emoji);
+                    button.innerHTML = `
+            ${emoji}
+            <span class="block text-xs mt-1 text-gray-600 dark:text-gray-400">${count}</span>
+        `;
+
+                    buttonsContainer.appendChild(button);
+                });
+
+                modal.classList.remove('hidden');
+            }
+
+            function closeReactionModal() {
+                document.getElementById('reactionModal').classList.add('hidden');
+                currentMovieId = null;
+            }
+
+            function isReactionActive(movieId, emoji) {
+                const reactions = movieReactions.get(movieId) || {};
+                return reactions[emoji]?.userReacted || false;
+            }
+
+            function getReactionCount(movieId, emoji) {
+                const reactions = movieReactions.get(movieId) || {};
+                return reactions[emoji]?.count || 0;
+            }
+
+            async function toggleReaction(movieId, emoji) {
+                try {
+                    const response = await fetch(`/rooms/{{ $room->id }}/movies/${movieId}/react`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ emoji })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            updateReactionState(movieId, emoji, data.reaction);
+                            updateReactionUI(movieId);
+                            showNotification('Reaction updated successfully!', 'success');
+                        }
+                    } else {
+                        showNotification('Failed to update reaction', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error toggling reaction:', error);
+                    showNotification('Error updating reaction', 'error');
+                }
+            }
+
+            function updateReactionState(movieId, emoji, reactionData) {
+                let movieReactionState = movieReactions.get(movieId) || {};
+                movieReactionState[emoji] = {
+                    count: reactionData.count,
+                    userReacted: reactionData.user_reacted
+                };
+                movieReactions.set(movieId, movieReactionState);
+            }
+
+            function updateReactionUI(movieId) {
+                // Update active reactions display
+                const activeReactionsContainer = document.getElementById(`active-reactions-${movieId}`);
+                const reactions = movieReactions.get(movieId) || {};
+
+                activeReactionsContainer.innerHTML = '';
+
+                Object.entries(reactions)
+                    .filter(([_, data]) => data.count > 0)
+                    .forEach(([emoji, data]) => {
+                        const badge = document.createElement('span');
+                        badge.className = `inline-flex items-center px-2 py-1 rounded-full text-sm
+                ${data.userReacted ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`;
+                        badge.innerHTML = `${emoji} ${data.count}`;
+                        activeReactionsContainer.appendChild(badge);
+                    });
+
+                // Update modal buttons if modal is open
+                if (currentMovieId === movieId) {
+                    const buttons = document.querySelectorAll('#reactionButtons .reaction-btn');
+                    buttons.forEach(button => {
+                        const emoji = button.textContent.trim().split('\n')[0];
+                        const count = getReactionCount(movieId, emoji);
+                        const isActive = isReactionActive(movieId, emoji);
+
+                        button.classList.toggle('bg-gray-100', isActive);
+                        button.classList.toggle('dark:bg-gray-700', isActive);
+                        button.querySelector('span').textContent = count;
+                    });
+                }
+            }
+
+            // Load initial reactions
+            async function loadInitialReactions() {
+                try {
+                    const response = await fetch(`/rooms/{{ $room->id }}/reactions`);
+                    const reactions = await response.json();
+
+                    // Group reactions by movie
+                    reactions.forEach(reaction => {
+                        const { movie_id, emoji, count, user_reacted } = reaction;
+                        updateReactionState(movie_id, emoji, { count, user_reacted });
+                        updateReactionUI(movie_id);
+                    });
+                } catch (error) {
+                    console.error('Error loading reactions:', error);
+                }
+            }
+
+            // Initialize reactions when page loads
+            document.addEventListener('DOMContentLoaded', loadInitialReactions);
+
+            // Close modal when clicking outside
+            document.getElementById('reactionModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('reactionModal')) {
+                    closeReactionModal();
+                }
             });
 
 
