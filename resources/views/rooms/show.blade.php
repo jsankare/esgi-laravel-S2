@@ -46,6 +46,7 @@
                                 @endif
                                 @if($room->elimination_started)
                                     <button onclick="resetElimination()"
+                                            id="resetButton"
                                             class="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition">
                                         Reset
                                     </button>
@@ -124,6 +125,13 @@
                                 Search
                             </button>
                         </div>
+                        <!-- Loading Indicator -->
+                        <div id="searchLoader" class="hidden mt-4">
+                            <div class="flex items-center justify-center">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                                <span class="ml-2 text-gray-600 dark:text-gray-400">Searching...</span>
+                            </div>
+                        </div>
                         <div id="searchResults" class="hidden mt-4">
                             <h4 class="font-medium mb-2 text-gray-800 dark:text-gray-200">Search Results</h4>
                             <div id="movieResults" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -165,7 +173,7 @@
 
             <div id="reply-to-message" class="mt-4 text-sm text-gray-500 dark:text-gray-400 hidden">
                 <strong>Replying to:</strong> <span id="reply-user-name"></span>
-            </div>  
+            </div>
 
             <form id="chatForm" class="mt-4" method="POST" action="{{ route('messages.store', $room->id) }}">
                 @csrf
@@ -290,6 +298,17 @@
 
                 winnerDisplay.classList.remove('hidden');
 
+                // Keep reset button visible
+                const resetButton = document.createElement('button');
+                resetButton.id = 'resetButton';
+                resetButton.onclick = resetElimination;
+                resetButton.className = 'bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition mt-4';
+                resetButton.textContent = 'Reset';
+                // Only add the reset button if it doesn't already exist
+                if (!document.getElementById('resetButton')) {
+                    winnerDisplay.appendChild(resetButton);
+                }
+
                 // Trigger confetti
                 confetti({
                     particleCount: 100,
@@ -338,6 +357,11 @@
                 const search = document.getElementById('movieSearch').value;
                 if (!search) return;
 
+                // Show loader
+                document.getElementById('searchLoader').classList.remove('hidden');
+                // Hide previous results while searching
+                document.getElementById('searchResults').classList.add('hidden');
+
                 fetch(`/rooms/{{ $room->id }}/movies/search?search=${encodeURIComponent(search)}`)
                     .then(response => response.json())
                     .then(data => {
@@ -349,7 +373,16 @@
                             resultsDiv.appendChild(movieCard);
                         });
 
+                        // Hide loader
+                        document.getElementById('searchLoader').classList.add('hidden');
+                        // Show results
                         document.getElementById('searchResults').classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Error searching movies:', error);
+                        // Hide loader on error
+                        document.getElementById('searchLoader').classList.add('hidden');
+                        showNotification('Error searching movies. Please try again.', 'error');
                     });
             }
 
@@ -464,11 +497,11 @@
                     searchMovies();
                 }
             });
-            
+
             function replyToMessage(messageId, userName) {
                 // Mettre à jour le champ caché pour parent_message_id
                 document.getElementById('parent_message_id').value = messageId;
-                
+
                 // Afficher le message de réponse avec le nom de l'utilisateur
                 const replyMessageDiv = document.getElementById('reply-to-message');
                 const replyUserNameSpan = document.getElementById('reply-user-name');
@@ -520,7 +553,7 @@
                 });
             });
 
-            
+
         </script>
     @endpush
 </x-app-layout>
