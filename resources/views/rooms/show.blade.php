@@ -15,6 +15,15 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            <!-- Room Users Info -->
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6">
+                    <div class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <span class="font-semibold">{{ $room->users->count() }} Members:</span>
+                        <span>{{ $room->users->pluck('name')->join(', ') }}</span>
+                    </div>
+                </div>
+            </div>
             <!-- Notification Container -->
             <div id="notification" class="hidden fixed top-4 right-4 z-50 max-w-sm">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border-l-4 flex items-center">
