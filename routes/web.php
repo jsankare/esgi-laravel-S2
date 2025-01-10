@@ -7,6 +7,7 @@ use App\Http\Controllers\MovieController;
 use App\Http\Controllers\RoomMovieController;
 use App\Http\Controllers\RoomEliminationController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\ActorController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -48,6 +49,10 @@ Route::middleware('auth')->group(function () {
     // Movie Reactions routes
     Route::post('/rooms/{room}/movies/{movie}/reactions', [MovieReactionController::class, 'store'])->name('movie.reactions.store');
     Route::delete('/rooms/{room}/movies/{movie}/reactions', [MovieReactionController::class, 'destroy'])->name('movie.reactions.destroy');
+
+
+    // Actor routes
+    Route::get('/actor/{actor}', [ActorController::class, 'show'])->name('actor.show');
 
     // Room Elimination routes
     Route::post('/rooms/{room}/elimination/start', [RoomEliminationController::class, 'start']);
