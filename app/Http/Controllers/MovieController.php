@@ -41,6 +41,11 @@ class MovieController extends Controller
             abort(404);
         }
 
-        return view('movies.show', ['movie' => $movie]);
+        return view('movies.show', ['movie' => $movie, 'actors' => $movie['credits']['cast'] ?? []]);
+    }
+
+    public function actors()
+    {
+        return $this->belongsToMany(Actor::class, 'movie_actor');
     }
 }

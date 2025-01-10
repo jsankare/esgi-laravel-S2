@@ -50,7 +50,16 @@
                                 <div class="space-y-2 text-gray-600 dark:text-gray-400">
                                     <p><span class="font-semibold">Director:</span> {{ $movie['Director'] }}</p>
                                     <p><span class="font-semibold">Writers:</span> {{ $movie['Writer'] }}</p>
-                                    <p><span class="font-semibold">Actors:</span> {{ $movie['Actors'] }}</p>
+                                    <p><span class="font-semibold">Actors:</span>
+                                    <ul>
+                                    @foreach ($movie['Actors'] as $actor)
+                                        <a href="{{ $actor['actorUrl'] }}">
+                                            {{ $actor['name'] }} ({{ $actor['character'] }})
+                                        </a><br>
+                                    @endforeach
+
+                                    </ul>
+                                    </p>
                                 </div>
 
                                 @if($movie['Ratings'])

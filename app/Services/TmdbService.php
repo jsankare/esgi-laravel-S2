@@ -85,6 +85,18 @@ class TmdbService
 
         if ($response->successful()) {
             $data = $response->json();
+                $data = $response->json();
+                $actors = collect($data['credits']['cast'] ?? [])
+                    ->take(5)
+                    ->map(function ($actor) {
+                        $actorUrl = route('actor.show', ['actor' => $actor['id']]); // Générer le lien vers l'acteur
+                        return [
+                            'id' => $actor['id'],
+                            'name' => $actor['name'],
+                            'character' => $actor['character'],
+                            'actorUrl' => $actorUrl // Lien vers la page de l'acteur
+                        ];
+                    });
             return [
                 'imdb_id' => $data['imdb_id'] ?? '',
                 'Title' => $data['title'],
@@ -94,7 +106,7 @@ class TmdbService
                 'Genre' => collect($data['genres'])->pluck('name')->implode(', '),
                 'Director' => $this->getDirector($data['credits'] ?? []),
                 'Writer' => $this->getWriters($data['credits'] ?? []),
-                'Actors' => $this->getActors($data['credits'] ?? []),
+                'Actors' => $actors->toArray(),
                 'Plot' => $data['overview'],
                 'Poster' => $data['poster_path'] ? $this->imageBaseUrl . $data['poster_path'] : null,
                 'Ratings' => [
@@ -142,11 +154,51 @@ class TmdbService
             ->implode(', ') ?: 'N/A';
     }
 
-    protected function getActors(array $credits): string
+    protected function getActors(array $credits): array
     {
         return collect($credits['cast'] ?? [])
-            ->take(5)
-            ->pluck('name')
-            ->implode(', ') ?: 'N/A';
+            ->map(function ($actor) {
+                return [
+                    'id' => $actor['id'], // L'ID TMDB de l'acteur
+                    'name' => $actor['name'], // Le nom de l'acteur
+                    'character' => $actor['character'] // Le personnage joué
+                ];
+            })
+            ->toArray();
     }
+
+    public function getActor(int $actorId): ?array
+    {
+        // Requête pour récupérer les détails de l'acteur, ainsi que ses films
+        $response = Http::get("{$this->baseUrl}/person/{$actorId}", [
+            'api_key' => $this->apiKey,
+            'language' => 'en-US'
+        ]);
+
+        // Si la requête réussit, récupérer les données
+        if ($response->successful()) {
+            $data = $response->json();
+
+            // Récupérer la liste des films de l'acteur
+            $movies = Http::get("{$this->baseUrl}/person/{$actorId}/movie_credits", [
+                'api_key' => $this->apiKey,
+                'language' => 'en-US'
+            ])->json();
+
+            // Retourner un tableau avec les informations de l'acteur et ses films
+            return [
+                'id' => $data['id'],
+                'name' => $data['name'],
+                'biography' => $data['biography'] ?? 'Biography not available',
+                'birthday' => $data['birthday'] ?? 'Unknown',
+                'place_of_birth' => $data['place_of_birth'] ?? 'Unknown',
+                'profile_path' => $data['profile_path'] ? $this->imageBaseUrl . $data['profile_path'] : null,
+                'movies' => $movies['cast'] ?? [],
+            ];
+        }
+
+        return null;
+    }
+
+    
 }
